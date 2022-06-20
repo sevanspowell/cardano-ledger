@@ -43,7 +43,6 @@ import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Serialization (decodeRecordNamedT, mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShots (..),
   )
@@ -175,8 +174,8 @@ instance
       <> toCBOR esNonMyopic
 
 instance
-  ( FromCBOR (Core.PParams era),
-    TransValue FromCBOR era,
+  ( FromCBOR (Core.Value era),
+    FromCBOR (Core.PParams era),
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
     FromSharedCBOR (Core.TxOut era),
     Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
@@ -310,7 +309,7 @@ instance
     encodeListLen 5 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us <> toCBOR sd
 
 instance
-  ( TransValue FromCBOR era,
+  ( CC.Crypto (Crypto era),
     FromCBOR (State (Core.EraRule "PPUP" era)),
     FromSharedCBOR (Core.TxOut era),
     Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
@@ -429,11 +428,12 @@ instance
     Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
     FromCBOR (Core.Value era),
     FromCBOR (State (Core.EraRule "PPUP" era)),
-    FromCBOR (StashedAVVMAddresses era)
+    FromCBOR (StashedAVVMAddresses era),
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
   ) =>
   FromCBOR (NewEpochState era)
   where
-  fromCBOR =
+  fromCBOR = do
     decode $
       RecD NewEpochState
         <! From

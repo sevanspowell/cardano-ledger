@@ -3,33 +3,25 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Shelley.Constraints where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Address (Addr)
-import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
   ( AnnotatedData,
-    AuxiliaryData,
     ChainData,
     PParams,
     PParamsDelta,
     Script,
     SerialisableData,
     TxBody,
-    TxOut,
     Value,
   )
 import Cardano.Ledger.Era (Crypto, Era (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
-import Data.Kind (Constraint, Type)
-import Data.Proxy (Proxy)
 
 --------------------------------------------------------------------------------
 -- Shelley Era
@@ -54,15 +46,15 @@ class
   ) =>
   UsesValue era
 
-class
-  ( Era era,
-    ChainData (TxOut era),
-    ToCBOR (TxOut era),
-    FromCBOR (TxOut era)
-  ) =>
-  UsesTxOut era
-  where
-  makeTxOut :: Proxy era -> Addr (Crypto era) -> Value era -> TxOut era
+-- class
+--   ( Era era,
+--     ChainData (TxOut era),
+--     ToCBOR (TxOut era),
+--     FromCBOR (TxOut era)
+--   ) =>
+--   UsesTxOut era
+--   where
+--   makeTxOut :: Proxy era -> Addr (Crypto era) -> Value era -> TxOut era
 
 type UsesScript era =
   ( Era era,
@@ -71,13 +63,12 @@ type UsesScript era =
     AnnotatedData (Script era)
   )
 
-type UsesAuxiliary era =
-  ( Era era,
-    Eq (AuxiliaryData era),
-    Show (AuxiliaryData era),
-    ValidateAuxiliaryData era (Crypto era),
-    AnnotatedData (AuxiliaryData era)
-  )
+-- type UsesAuxiliary era =
+--   ( Era era,
+--     Eq (AuxiliaryData era),
+--     Show (AuxiliaryData era),
+--     AnnotatedData (AuxiliaryData era)
+--   )
 
 class
   ( Era era,
@@ -95,11 +86,3 @@ class
     PParams era ->
     PParamsDelta era ->
     PParams era
-
--- | Apply 'c' to all the types transitively involved with Value when
--- (Core.Value era) is an instance of Compactible
-type TransValue (c :: Type -> Constraint) era =
-  ( Era era,
-    Compactible (Value era),
-    c (Value era)
-  )

@@ -5,13 +5,13 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Block
@@ -20,6 +20,7 @@ module Cardano.Ledger.Block
     bheader,
     bbody,
     neededTxInsForBlock,
+    txid,
   )
 where
 
@@ -32,21 +33,25 @@ import Cardano.Binary
     encodePreEncoded,
     serializeEncoding,
   )
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
+import Cardano.Ledger.Core (Era, EraTx (..), EraTxBody (..), ValidateScript (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era (getAllTxInputs), ValidateScript (..))
+import qualified Cardano.Ledger.Crypto as CC
 import qualified Cardano.Ledger.Era as Era
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.SafeHash (HashAnnotated, hashAnnotated)
 import Cardano.Ledger.Serialization
   ( ToCBORGroup (..),
     decodeRecordNamed,
   )
-import Cardano.Ledger.TxIn (TxIn (..), txid)
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data Block h era
@@ -169,12 +174,25 @@ bbody (Block' _ txs _) = txs
 -- will use 'neededTxInsForBlock' to retrieve the needed UTxO from disk
 -- and present only those to the ledger.
 neededTxInsForBlock ::
-  Era era =>
+  forall h era.
+  ( EraTx era,
+    Era.SupportsSegWit era
+  ) =>
   Block h era ->
-  Set (TxIn (Crypto era))
+  Set (TxIn (Era.Crypto era))
 neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where
-    txBodies = map (getField @"body") $ toList $ Era.fromTxSeq txsSeq
-    allTxIns = Set.unions $ map getAllTxInputs txBodies
+    txBodies = map (^. txBodyG) $ toList $ Era.fromTxSeq txsSeq
+    allTxIns = Set.unions $ map Era.getAllTxInputs txBodies
     newTxIds = Set.fromList $ map txid txBodies
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds
+
+-- | Compute the id of a transaction.
+txid ::
+  forall era c.
+  ( HashAlgorithm (CC.HASH c),
+    HashAnnotated (TxBody era) EraIndependentTxBody c
+  ) =>
+  TxBody era ->
+  TxId c
+txid = TxId . hashAnnotated

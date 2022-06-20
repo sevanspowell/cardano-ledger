@@ -526,8 +526,9 @@ class
 
       tx' = addKeyWitnesses @era tx dummyKeyWits
 
-  -- | Evaluate the minimum lovelace that a given transaciton output must contain.
+  -- | Evaluate the minimum lovelace that a given transaction output must contain.
   evaluateMinLovelaceOutput :: Core.PParams era -> Core.TxOut era -> Coin
+
 
 --------------------------------------------------------------------------------
 -- Shelley specifics

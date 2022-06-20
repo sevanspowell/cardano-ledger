@@ -82,7 +82,7 @@ data Metadata era = Metadata'
 instance NFData (Metadata era) where
   rnf m = mdMap m `deepseq` rnf (mdBytes m)
 
--- Usually we derive SafetToHash instances, but since Metadata preserves its serialisation
+-- Usually we derive SafeToHash instances, but since Metadata preserves its serialisation
 -- bytes we can just extract them here, and make an explicit SafeToHash instance.
 
 instance SafeToHash (Metadata era) where

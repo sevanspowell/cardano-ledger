@@ -19,8 +19,7 @@ import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesPParams (mergePPUpdates),
+  ( UsesPParams (mergePPUpdates),
     UsesScript,
     UsesTxBody,
     UsesValue,

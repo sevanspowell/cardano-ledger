@@ -86,6 +86,7 @@ library
     Cardano.Ledger.Shelley.TxBody
     Cardano.Ledger.Shelley.UTxO
   other-modules:
+    Cardano.Ledger.Shelley.Core
     Cardano.Ledger.Shelley.LedgerState.DPState
     Cardano.Ledger.Shelley.LedgerState.IncrementalStake
     Cardano.Ledger.Shelley.LedgerState.NewEpochState

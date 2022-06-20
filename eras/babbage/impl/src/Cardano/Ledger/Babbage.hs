@@ -193,23 +193,15 @@ instance CC.Crypto c => API.CLI (BabbageEra c) where
 
   evaluateMinLovelaceOutput pp out = babbageMinUTxOValue pp (mkSized out)
 
-type instance Core.Tx (BabbageEra c) = ValidatedTx (BabbageEra c)
-
-type instance Core.TxOut (BabbageEra c) = TxOut (BabbageEra c)
-
-type instance Core.TxBody (BabbageEra c) = TxBody (BabbageEra c)
-
-type instance Core.Value (BabbageEra c) = Mary.Value c
-
-type instance Core.Script (BabbageEra c) = Script (BabbageEra c)
-
-type instance Core.AuxiliaryData (BabbageEra c) = AuxiliaryData (BabbageEra c)
-
-type instance Core.PParams (BabbageEra c) = PParams (BabbageEra c)
-
-type instance Core.Witnesses (BabbageEra c) = TxWitness (BabbageEra c)
-
-type instance Core.PParamsDelta (BabbageEra c) = PParamsUpdate (BabbageEra c)
+type instance Tx (BabbageEra c) = AlonzoTx (BabbageEra c)
+type instance TxOut (BabbageEra c) = BabbageTxOut (BabbageEra c)
+type instance TxBody (BabbageEra c) = BabbageTxBody (BabbageEra c)
+type instance Value (BabbageEra c) = MaryValue c
+type instance Script (BabbageEra c) = AlonzoScript (BabbageEra c)
+type instance AuxiliaryData (BabbageEra c) = AlonzoAuxiliaryData (BabbageEra c)
+type instance PParams (BabbageEra c) = BabbagePParams (BabbageEra c)
+type instance Witnesses (BabbageEra c) = AlonzoTxWitness (BabbageEra c)
+type instance PParamsDelta (BabbageEra c) = BabbagePParamsUpdate (BabbageEra c)
 
 instance CC.Crypto c => UsesValue (BabbageEra c)
 

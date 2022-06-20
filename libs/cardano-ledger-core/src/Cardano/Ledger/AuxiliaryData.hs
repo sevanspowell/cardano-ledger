@@ -2,20 +2,16 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
-    ValidateAuxiliaryData (..),
   )
 where
 
 import Cardano.Binary (FromCBOR, ToCBOR)
-import Cardano.Ledger.BaseTypes (ProtVer)
-import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash (SafeHash)
@@ -34,7 +30,3 @@ deriving instance
 deriving instance
   CC.Crypto crypto =>
   FromCBOR (AuxiliaryDataHash crypto)
-
-class ValidateAuxiliaryData era c | era -> c where
-  hashAuxiliaryData :: Core.AuxiliaryData era -> AuxiliaryDataHash c
-  validateAuxiliaryData :: ProtVer -> Core.AuxiliaryData era -> Bool

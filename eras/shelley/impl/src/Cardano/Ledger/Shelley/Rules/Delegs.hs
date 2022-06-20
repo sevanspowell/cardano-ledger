@@ -60,6 +60,7 @@ import Cardano.Ledger.Shelley.TxBody
     Delegation (..),
     Ptr (..),
     RewardAcnt (..),
+    ShelleyEraTxBody (..),
     Wdrl (..),
   )
 import Cardano.Ledger.Slot (SlotNo)
@@ -85,7 +86,7 @@ import Data.Typeable (Typeable)
 import qualified Data.UMap as UM
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data DELEGS era
@@ -125,8 +126,8 @@ deriving stock instance
   Eq (DelegsPredicateFailure era)
 
 instance
-  ( Era era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+  ( Core.EraTx era,
+    ShelleyEraTxBody era,
     Embed (Core.EraRule "DELPL" era) (DELEGS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
@@ -193,8 +194,8 @@ instance
 
 delegsTransition ::
   forall era.
-  ( Era era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+  ( Core.EraTx era,
+    ShelleyEraTxBody era,
     Embed (Core.EraRule "DELPL" era) (DELEGS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
@@ -208,7 +209,7 @@ delegsTransition = do
   case certificates of
     Empty -> do
       let ds = dpsDState dpstate
-          wdrls_ = unWdrl . getField @"wdrls" $ getField @"body" tx
+          wdrls_ = unWdrl (tx ^. Core.txBodyG . txBodyWdrlsG)
           rewards' = rewards ds
       isSubmapOf wdrls_ rewards' -- wdrls_ ⊆ rewards
         ?! WithdrawalsNotInRewardsDELEGS

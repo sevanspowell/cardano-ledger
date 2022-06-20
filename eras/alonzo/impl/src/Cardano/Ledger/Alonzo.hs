@@ -192,23 +192,23 @@ instance CC.Crypto c => API.CLI (AlonzoEra c) where
   evaluateMinLovelaceOutput pp out =
     Coin $ utxoEntrySize out * unCoin (_coinsPerUTxOWord pp)
 
-type instance Core.Tx (AlonzoEra c) = ValidatedTx (AlonzoEra c)
+type instance Tx (AlonzoEra c) = AlonzoTx (AlonzoEra c)
 
-type instance Core.TxOut (AlonzoEra c) = TxOut (AlonzoEra c)
+type instance TxOut (AlonzoEra c) = AlonzoTxOut (AlonzoEra c)
 
-type instance Core.TxBody (AlonzoEra c) = TxBody (AlonzoEra c)
+type instance TxBody (AlonzoEra c) = AlonzoTxBody (AlonzoEra c)
 
-type instance Core.Value (AlonzoEra c) = V.Value c
+type instance Value (AlonzoEra c) = MaryValue c
 
-type instance Core.Script (AlonzoEra c) = Script (AlonzoEra c)
+type instance Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
 
-type instance Core.AuxiliaryData (AlonzoEra c) = AuxiliaryData (AlonzoEra c)
+type instance AuxiliaryData (AlonzoEra c) = AlonzoAuxiliaryData (AlonzoEra c)
 
-type instance Core.PParams (AlonzoEra c) = PParams (AlonzoEra c)
+type instance PParams (AlonzoEra c) = AlonzoPParams (AlonzoEra c)
 
-type instance Core.Witnesses (AlonzoEra c) = TxWitness (AlonzoEra c)
+type instance Witnesses (AlonzoEra c) = AlonzoTxWitness (AlonzoEra c)
 
-type instance Core.PParamsDelta (AlonzoEra c) = PParamsUpdate (AlonzoEra c)
+type instance PParamsDelta (AlonzoEra c) = AlonzoPParamsUpdate (AlonzoEra c)
 
 instance CC.Crypto c => UsesValue (AlonzoEra c)
 

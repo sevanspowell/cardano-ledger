@@ -375,7 +375,7 @@ data TxBodyRaw era = TxBodyRaw
     _vldt :: !ValidityInterval,
     _update :: !(StrictMaybe (Update era)),
     _reqSignerHashes :: !(Set (KeyHash 'Witness (Crypto era))),
-    _mint :: !(Value (Crypto era)),
+    _mint :: !(MultiAsset (Crypto era)),
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
     -- Operations on the TxBody in the BabbageEra depend upon this.

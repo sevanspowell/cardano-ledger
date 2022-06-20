@@ -14,6 +14,7 @@
 module Cardano.Ledger.Shelley.PParams
   ( PParams' (..),
     PParams,
+    ShelleyPParams,
     PPUPState (..),
     emptyPParams,
     HKD,
@@ -84,6 +85,11 @@ import Numeric.Natural (Natural)
 
 -- ====================================================================
 
+type PParams era = ShelleyPParams era
+
+{-# DEPRECATED PParams "Use `ShelleyPParams` instead" #-}
+
+
 -- | Protocol parameters.
 --
 -- We use the `HKD` type family so that the protocol parameters type and
@@ -146,7 +152,7 @@ data PParams' f era = PParams
   }
   deriving (Generic)
 
-type PParams era = PParams' Identity era
+type ShelleyPParams era = PParams' Identity era
 
 deriving instance Eq (PParams' Identity era)
 
