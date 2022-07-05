@@ -13,7 +13,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Shelley.Address.Bootstrap
+module Cardano.Ledger.Keys.Bootstrap
   ( BootstrapWitness
       ( BootstrapWitness,
         bwKey,
