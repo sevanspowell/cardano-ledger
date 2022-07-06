@@ -43,7 +43,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     isRetirePool,
     isTreasuryMIRCert,
   )
-import Cardano.Ledger.Shelley.LedgerState (LedgerState, txsizeBound)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState, txSizeBound)
 import Cardano.Ledger.Shelley.PParams
   ( Update (..),
     pattern ProposedPPUpdates,
@@ -350,7 +350,7 @@ propAbstractSizeBoundsBytes = property $ do
     $ \tr -> do
       let txs :: [Core.Tx era]
           txs = traceSignals OldestFirst tr
-      all (\tx -> txsizeBound (Proxy @era) tx >= numBytes tx) txs
+      all (\tx -> txSizeBound tx >= numBytes tx) txs
   where
     p :: Proxy era
     p = Proxy
@@ -377,7 +377,7 @@ propAbstractSizeNotTooBig = property $ do
       -- an acceptableMagnitude of three, though.
       acceptableMagnitude = (3 :: Integer)
       numBytes = toInteger . BS.length . serialize'
-      notTooBig txb = txsizeBound (Proxy @era) txb <= acceptableMagnitude * numBytes txb
+      notTooBig tx = txSizeBound tx <= acceptableMagnitude * numBytes tx
   forAllTraceFromInitState @(LEDGER era)
     testGlobals
     tl
@@ -386,7 +386,7 @@ propAbstractSizeNotTooBig = property $ do
     $ \tr -> do
       let txs :: [Core.Tx era]
           txs = traceSignals OldestFirst tr
-      all notTooBig txs
+      all notTooBig tx
   where
     p :: Proxy era
     p = Proxy
@@ -423,3 +423,27 @@ epochsInTrace bs =
     EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfoPure) testGlobals undefined
     blockSlot = bheaderSlotNo . bhbody . bheader
     atEpoch (SlotNo s) = s `div` slotsPerEpoch
+
+
+-- | Convenience Function to bound the txsize function.
+-- | It can be helpful for coin selection.
+txSizeBound ::
+  forall era.
+  EraTx era =>
+  Core.Tx era ->
+  Integer
+txSizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
+  where
+    uint = 5
+    smallArray = 1
+    hashLen = 32
+    hashObj = 2 + hashLen
+    addrHashLen = 28
+    addrHeader = 1
+    address = 2 + addrHeader + 2 * addrHashLen
+    txBody = tx ^. bodyTxG
+    numInputs = toInteger . length $ txBody ^. inputsTxBodyG
+    inputSize = smallArray + uint + hashObj
+    numOutputs = toInteger . length $ txBody ^. outputsTxBodyG
+    outputSize = smallArray + uint + address
+    rest = tx ^. sizeTxG

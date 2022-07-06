@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.UTxO (balance)
 import qualified Cardano.Ledger.Val as Val
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Data.Foldable (fold)
 
 data AdaPots = AdaPots
@@ -40,7 +40,7 @@ data AdaPots = AdaPots
 
 -- | Calculate the total ada pots in the epoch state
 totalAdaPotsES ::
-  Core.EraTxOut era =>
+  EraTxOut era =>
   EpochState era ->
   AdaPots
 totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
@@ -59,7 +59,7 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
     coins = Val.coin $ balance u
 
 -- | Calculate the total ada in the epoch state
-totalAdaES :: Core.EraTxOut era => EpochState era -> Coin
+totalAdaES :: EraTxOut era => EpochState era -> Coin
 totalAdaES cs =
   treasuryAdaPot
     <> reservesAdaPot

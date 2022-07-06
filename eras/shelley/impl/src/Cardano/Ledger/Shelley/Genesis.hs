@@ -33,10 +33,9 @@ import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (HASH, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
@@ -334,7 +333,7 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
 
 genesisUTxO ::
   forall era.
-  (Era era, Core.EraTxOut era) =>
+  (Era era, EraTxOut era) =>
   ShelleyGenesis era ->
   UTxO era
 genesisUTxO genesis =
@@ -343,7 +342,7 @@ genesisUTxO genesis =
       [ (txIn, txOut)
         | (addr, amount) <- LM.unListMap (sgInitialFunds genesis),
           let txIn = initialFundsPseudoTxIn addr
-              txOut = Core.mkBasicTxOut addr (Val.inject amount)
+              txOut = mkBasicTxOut addr (Val.inject amount)
       ]
 
 -- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding

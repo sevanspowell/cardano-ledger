@@ -56,7 +56,6 @@ module Cardano.Ledger.Shelley.Tx
     prettyWitnessSetParts,
     minfee,
     witsFromTxWitnesses,
-    txsizeBound,
   )
 where
 
@@ -78,10 +77,10 @@ import Cardano.Ledger.BaseTypes
   ( maybeToStrictMaybe,
   )
 import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Core hiding (Tx, TxBody, TxOut)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.Keys
@@ -118,39 +117,39 @@ import Numeric.Natural (Natural)
 
 data TxRaw era = TxRaw
   { _body :: !(Core.TxBody era),
-    _wits :: !(Core.Witnesses era),
-    _auxiliaryData :: !(StrictMaybe (Core.AuxiliaryData era))
+    _wits :: !(Witnesses era),
+    _auxiliaryData :: !(StrictMaybe (AuxiliaryData era))
   }
   deriving (Generic, Typeable)
 
 instance
   ( NFData (Core.TxBody era),
-    NFData (Core.Witnesses era),
-    NFData (Core.AuxiliaryData era)
+    NFData (Witnesses era),
+    NFData (AuxiliaryData era)
   ) =>
   NFData (TxRaw era)
 
 deriving instance
   ( Era era,
-    Eq (Core.AuxiliaryData era),
+    Eq (AuxiliaryData era),
     Eq (Core.TxBody era),
-    Eq (Core.Witnesses era)
+    Eq (Witnesses era)
   ) =>
   Eq (TxRaw era)
 
 deriving instance
   ( Era era,
-    Show (Core.AuxiliaryData era),
+    Show (AuxiliaryData era),
     Show (Core.TxBody era),
-    Show (Core.Witnesses era)
+    Show (Witnesses era)
   ) =>
   Show (TxRaw era)
 
 instance
   ( Era era,
-    NoThunks (Core.AuxiliaryData era),
+    NoThunks (AuxiliaryData era),
     NoThunks (Core.TxBody era),
-    NoThunks (Core.Witnesses era)
+    NoThunks (Witnesses era)
   ) =>
   NoThunks (TxRaw era)
 
@@ -161,7 +160,7 @@ type Tx era = ShelleyTx era
 
 {-# DEPRECATED Tx "Use `ShelleyTx` instead" #-}
 
-instance CC.Crypto crypto => Core.EraTx (ShelleyEra crypto) where
+instance CC.Crypto crypto => EraTx (ShelleyEra crypto) where
   type Tx (ShelleyEra crypto) = ShelleyTx (ShelleyEra crypto)
 
   bodyTxG = to (\(TxConstr (Memo tx _)) -> _body tx)
@@ -174,8 +173,8 @@ instance CC.Crypto crypto => Core.EraTx (ShelleyEra crypto) where
 
 deriving newtype instance
   ( NFData (Core.TxBody (ShelleyEra crypto)),
-    NFData (Core.Witnesses (ShelleyEra crypto)),
-    NFData (Core.AuxiliaryData (ShelleyEra crypto)),
+    NFData (Witnesses (ShelleyEra crypto)),
+    NFData (AuxiliaryData (ShelleyEra crypto)),
     CC.Crypto crypto
   ) =>
   NFData (ShelleyTx (ShelleyEra crypto))
@@ -184,29 +183,29 @@ deriving newtype instance Eq (Tx (ShelleyEra crypto))
 
 deriving newtype instance
   ( CC.Crypto crypto,
-    Show (Core.AuxiliaryData (ShelleyEra crypto)),
+    Show (AuxiliaryData (ShelleyEra crypto)),
     Show (Core.TxBody (ShelleyEra crypto)),
-    Show (Core.Witnesses (ShelleyEra crypto))
+    Show (Witnesses (ShelleyEra crypto))
   ) =>
   Show (ShelleyTx (ShelleyEra crypto))
 
 deriving newtype instance
   ( CC.Crypto crypto,
-    NoThunks (Core.AuxiliaryData (ShelleyEra crypto)),
+    NoThunks (AuxiliaryData (ShelleyEra crypto)),
     NoThunks (Core.TxBody (ShelleyEra crypto)),
-    NoThunks (Core.Witnesses (ShelleyEra crypto))
+    NoThunks (Witnesses (ShelleyEra crypto))
   ) =>
   NoThunks (ShelleyTx (ShelleyEra crypto))
 
 pattern ShelleyTx ::
   ( CC.Crypto crypto,
-    ToCBOR (Core.AuxiliaryData (ShelleyEra crypto)),
+    ToCBOR (AuxiliaryData (ShelleyEra crypto)),
     ToCBOR (Core.TxBody (ShelleyEra crypto)),
-    ToCBOR (Core.Witnesses (ShelleyEra crypto))
+    ToCBOR (Witnesses (ShelleyEra crypto))
   ) =>
   Core.TxBody (ShelleyEra crypto) ->
-  Core.Witnesses (ShelleyEra crypto) ->
-  StrictMaybe (Core.AuxiliaryData (ShelleyEra crypto)) ->
+  Witnesses (ShelleyEra crypto) ->
+  StrictMaybe (AuxiliaryData (ShelleyEra crypto)) ->
   ShelleyTx (ShelleyEra crypto)
 pattern ShelleyTx {body, wits, auxiliaryData} <-
   TxConstr
@@ -250,9 +249,9 @@ instance HasField "txsize" (Tx era) Integer where
 --------------------------------------------------------------------------------
 
 encodeTxRaw ::
-  ( ToCBOR (Core.AuxiliaryData era),
+  ( ToCBOR (AuxiliaryData era),
     ToCBOR (Core.TxBody era),
-    ToCBOR (Core.Witnesses era)
+    ToCBOR (Witnesses era)
   ) =>
   TxRaw era ->
   Encode ('Closed 'Dense) (TxRaw era)
@@ -265,8 +264,8 @@ encodeTxRaw TxRaw {_body, _wits, _auxiliaryData} =
 instance
   ( Era era,
     FromCBOR (Annotator (Core.TxBody era)),
-    FromCBOR (Annotator (Core.AuxiliaryData era)),
-    FromCBOR (Annotator (Core.Witnesses era))
+    FromCBOR (Annotator (AuxiliaryData era)),
+    FromCBOR (Annotator (Witnesses era))
   ) =>
   FromCBOR (Annotator (TxRaw era))
   where
@@ -285,8 +284,8 @@ deriving via
   instance
     ( CC.Crypto crypto,
       FromCBOR (Annotator (Core.TxBody (ShelleyEra crypto))),
-      FromCBOR (Annotator (Core.AuxiliaryData (ShelleyEra crypto))),
-      FromCBOR (Annotator (Core.Witnesses (ShelleyEra crypto)))
+      FromCBOR (Annotator (AuxiliaryData (ShelleyEra crypto))),
+      FromCBOR (Annotator (Witnesses (ShelleyEra crypto)))
     ) =>
     FromCBOR (Annotator (Tx (ShelleyEra crypto)))
 
@@ -300,8 +299,8 @@ deriving via
 --   The only intended use case for this is for segregated witness.
 unsafeConstructTxWithBytes ::
   Core.TxBody era ->
-  Core.Witnesses era ->
-  StrictMaybe (Core.AuxiliaryData era) ->
+  Witnesses era ->
+  StrictMaybe (AuxiliaryData era) ->
   SBS.ShortByteString ->
   Tx era
 unsafeConstructTxWithBytes b w a bytes = TxConstr (Memo (TxRaw b w a) bytes)
@@ -312,24 +311,24 @@ unsafeConstructTxWithBytes b w a bytes = TxConstr (Memo (TxRaw b w a) bytes)
 
 data WitnessSetHKD f era = WitnessSet'
   { addrWits' :: !(HKD f (Set (WitVKey 'Witness (Crypto era)))),
-    scriptWits' :: !(HKD f (Map (ScriptHash (Crypto era)) (Core.Script era))),
+    scriptWits' :: !(HKD f (Map (ScriptHash (Crypto era)) (Script era))),
     bootWits' :: !(HKD f (Set (BootstrapWitness (Crypto era)))),
     txWitsBytes :: BSL.ByteString
   }
 
 deriving instance
-  (Era era, Show (Core.Script era)) =>
+  (Era era, Show (Script era)) =>
   Show (WitnessSetHKD Identity era)
 
 deriving instance
-  (Era era, Eq (Core.Script era)) =>
+  (Era era, Eq (Script era)) =>
   Eq (WitnessSetHKD Identity era)
 
 deriving instance Era era => Generic (WitnessSetHKD Identity era)
 
 instance
   ( Era era,
-    NFData (Core.Script era),
+    NFData (Script era),
     NFData (WitVKey 'Witness (Crypto era)),
     NFData (BootstrapWitness (Crypto era))
   ) =>
@@ -341,7 +340,7 @@ deriving via
      ]
     (WitnessSetHKD Identity era)
   instance
-    (Era era, NoThunks (Core.Script era)) =>
+    (Era era, NoThunks (Script era)) =>
     (NoThunks (WitnessSetHKD Identity era))
 
 type WitnessSet = WitnessSetHKD Identity
@@ -350,7 +349,7 @@ type WitnessSet = WitnessSetHKD Identity
 
 type ShelleyWitnesses = WitnessSetHKD Identity
 
-instance CC.Crypto crypto => Core.EraWitnesses (ShelleyEra crypto) where
+instance CC.Crypto crypto => EraWitnesses (ShelleyEra crypto) where
   type Witnesses (ShelleyEra crypto) = ShelleyWitnesses (ShelleyEra crypto)
 
   scriptWitsG = to scriptWits'
@@ -363,7 +362,7 @@ instance Era era => ToCBOR (WitnessSetHKD Identity era) where
   toCBOR = encodePreEncoded . BSL.toStrict . txWitsBytes
 
 instance
-  (Era era, ToCBOR (Core.Script era)) =>
+  (Era era, ToCBOR (Script era)) =>
   Semigroup (WitnessSetHKD Identity era)
   where
   (WitnessSet' a b c _) <> y | Set.null a && Map.null b && Set.null c = y
@@ -372,15 +371,15 @@ instance
     WitnessSet (a <> a') (b <> b') (c <> c')
 
 instance
-  (Era era, ToCBOR (Core.Script era)) =>
+  (Era era, ToCBOR (Script era)) =>
   Monoid (WitnessSetHKD Identity era)
   where
   mempty = WitnessSet mempty mempty mempty
 
 pattern WitnessSet ::
-  (Era era, ToCBOR (Core.Script era)) =>
+  (Era era, ToCBOR (Script era)) =>
   Set (WitVKey 'Witness (Crypto era)) ->
-  Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  Map (ScriptHash (Crypto era)) (Script era) ->
   Set (BootstrapWitness (Crypto era)) ->
   WitnessSet era
 pattern WitnessSet {addrWits, scriptWits, bootWits} <-
@@ -426,12 +425,12 @@ prettyWitnessSetParts (WitnessSet' a b c _) = (a, b, c)
 
 segwitTx ::
   ( ToCBOR (Core.TxBody era),
-    ToCBOR (Core.Witnesses era),
-    ToCBOR (Core.AuxiliaryData era)
+    ToCBOR (Witnesses era),
+    ToCBOR (AuxiliaryData era)
   ) =>
   Annotator (Core.TxBody era) ->
-  Annotator (Core.Witnesses era) ->
-  Maybe (Annotator (Core.AuxiliaryData era)) ->
+  Annotator (Witnesses era) ->
+  Maybe (Annotator (AuxiliaryData era)) ->
   Annotator (Tx era)
 segwitTx
   bodyAnn
@@ -456,7 +455,7 @@ segwitTx
 
 instance
   ( Typeable era,
-    FromCBOR (Annotator (Core.Script era)),
+    FromCBOR (Annotator (Script era)),
     ValidateScript era
   ) =>
   FromCBOR (Annotator (WitnessSetHKD Identity era))
@@ -473,7 +472,7 @@ instance (Typeable kr, CC.Crypto crypto) => Ord (IgnoreSigOrd kr crypto) where
 
 decodeWits ::
   forall era s.
-  ( FromCBOR (Annotator (Core.Script era)),
+  ( FromCBOR (Annotator (Script era)),
     ValidateScript era
   ) =>
   Decoder s (Annotator (WitnessSet era))
@@ -523,7 +522,7 @@ keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 hashMultiSigScript ::
   forall era.
   ( ValidateScript era,
-    Core.Script era ~ MultiSig (Crypto era)
+    Script era ~ MultiSig (Crypto era)
   ) =>
   MultiSig (Crypto era) ->
   ScriptHash (Crypto era)
@@ -556,14 +555,14 @@ validateNativeMultiSigScript ::
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
   where
-    vhks = Set.map witVKeyHash (addrWits' (tx ^. Core.witsTxG))
+    vhks = Set.map witVKeyHash (addrWits' (tx ^. witsTxG))
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
   CC.Crypto crypto =>
   Tx (ShelleyEra crypto) ->
-  Map (ScriptHash crypto) (Core.Script (ShelleyEra crypto))
-txwitsScript tx = tx ^. Core.witsTxG . Core.scriptWitsG
+  Map (ScriptHash crypto) (Script (ShelleyEra crypto))
+txwitsScript tx = tx ^. witsTxG . scriptWitsG
 
 extractKeyHashWitnessSet ::
   forall (r :: KeyRole) crypto.
@@ -576,7 +575,7 @@ extractKeyHashWitnessSet = foldr accum Set.empty
 
 -- | Minimum fee calculation
 minfee ::
-  ( Core.EraTx era,
+  ( EraTx era,
     HasField "_minfeeA" pp Natural,
     HasField "_minfeeB" pp Natural
   ) =>
@@ -586,42 +585,18 @@ minfee ::
 minfee pp tx =
   Coin $
     fromIntegral (getField @"_minfeeA" pp)
-      * tx ^. Core.sizeTxG + fromIntegral (getField @"_minfeeB" pp)
+      * tx ^. sizeTxG + fromIntegral (getField @"_minfeeB" pp)
 
 -- | Extract the witness hashes from the Transaction.
 witsFromTxWitnesses ::
-  Core.EraTx era =>
+  EraTx era =>
   Core.Tx era ->
   Set (KeyHash 'Witness (Crypto era))
 witsFromTxWitnesses tx =
-  Set.map witVKeyHash (tx ^. Core.witsTxG . Core.addrWitsG)
-    `Set.union` Set.map bootstrapWitKeyHash (tx ^. Core.witsTxG . Core.bootAddrWitsG)
+  Set.map witVKeyHash (tx ^. witsTxG . addrWitsG)
+    `Set.union` Set.map bootstrapWitKeyHash (tx ^. witsTxG . bootAddrWitsG)
 
--- | Convenience Function to bound the txsize function.
--- | It can be helpful for coin selection.
-txsizeBound ::
-  forall era.
-  Core.EraTx era =>
-  Proxy era ->
-  Core.Tx era ->
-  Integer
-txsizeBound Proxy tx = numInputs * inputSize + numOutputs * outputSize + rest
-  where
-    uint = 5
-    smallArray = 1
-    hashLen = 32
-    hashObj = 2 + hashLen
-    addrHashLen = 28
-    addrHeader = 1
-    address = 2 + addrHeader + 2 * addrHashLen
-    txbody = tx ^. Core.bodyTxG
-    numInputs = toInteger . length $ txbody ^. Core.inputsTxBodyG
-    inputSize = smallArray + uint + hashObj
-    numOutputs = toInteger . length $ txbody ^. Core.outputsTxBodyG
-    outputSize = smallArray + uint + address
-    rest = tx ^. Core.sizeTxG
-
-instance CC.Crypto crypto => Core.EraAuxiliaryData (ShelleyEra crypto) where
+instance CC.Crypto crypto => EraAuxiliaryData (ShelleyEra crypto) where
   type AuxiliaryData (ShelleyEra crypto) = Metadata (ShelleyEra crypto)
 
   validateAuxiliaryData _ (Metadata m) = all validMetadatum m

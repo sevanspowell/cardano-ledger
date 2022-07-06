@@ -51,8 +51,8 @@ import Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Core hiding (PParams, PParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Core
@@ -164,7 +164,7 @@ type ShelleyPParams era = PParams' Identity era
 type ShelleyPParamsUpdate era = PParams' StrictMaybe era
 
 
-instance CC.Crypto crypto => Core.EraPParams (ShelleyEra crypto) where
+instance CC.Crypto crypto => EraPParams (ShelleyEra crypto) where
   type PParams (ShelleyEra crypto) = ShelleyPParams (ShelleyEra crypto)
   type PParamsUpdate (ShelleyEra crypto) = ShelleyPParamsUpdate (ShelleyEra crypto)
 

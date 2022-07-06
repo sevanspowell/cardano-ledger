@@ -49,9 +49,8 @@ import Cardano.Ledger.BaseTypes
     strictMaybeToMaybe,
     (==>),
   )
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -62,6 +61,7 @@ import Cardano.Ledger.Keys
     VKey,
     asWitness,
   )
+import Cardano.Ledger.Keys.Bootstrap (bwKey, verifyBootstrapWit)
 import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
     Test,
@@ -75,7 +75,6 @@ import Cardano.Ledger.Serialization
     decodeSet,
     encodeFoldable,
   )
-import Cardano.Ledger.Keys.Bootstrap (bwKey, verifyBootstrapWit)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( delegCWitness,
     genesisCWitness,
@@ -91,10 +90,7 @@ import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
-    ValidateScript,
     extractKeyHashWitnessSet,
-    hashScript,
-    validateScript,
     witsFromTxWitnesses,
   )
 import Cardano.Ledger.Shelley.TxBody
@@ -152,7 +148,7 @@ data UtxowPredicateFailure era
       !(Set (ScriptHash (Crypto era))) -- missing scripts
   | ScriptWitnessNotValidatingUTXOW
       !(Set (ScriptHash (Crypto era))) -- failed scripts
-  | UtxoFailure (PredicateFailure (Core.EraRule "UTXO" era))
+  | UtxoFailure (PredicateFailure (EraRule "UTXO" era))
   | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness (Crypto era)))
   | MissingTxBodyMetadataHash
       !(AuxiliaryDataHash (Crypto era)) -- hash of the full metadata
@@ -168,31 +164,31 @@ data UtxowPredicateFailure era
   deriving (Generic)
 
 newtype UtxowEvent era
-  = UtxoEvent (Event (Core.EraRule "UTXO" era))
+  = UtxoEvent (Event (EraRule "UTXO" era))
 
 instance
-  ( NoThunks (PredicateFailure (Core.EraRule "UTXO" era)),
+  ( NoThunks (PredicateFailure (EraRule "UTXO" era)),
     Era era
   ) =>
   NoThunks (UtxowPredicateFailure era)
 
 deriving stock instance
-  ( Eq (PredicateFailure (Core.EraRule "UTXO" era)),
+  ( Eq (PredicateFailure (EraRule "UTXO" era)),
     Era era
   ) =>
   Eq (UtxowPredicateFailure era)
 
 deriving stock instance
-  ( Show (PredicateFailure (Core.EraRule "UTXO" era)),
+  ( Show (PredicateFailure (EraRule "UTXO" era)),
     Era era
   ) =>
   Show (UtxowPredicateFailure era)
 
 instance
   ( Era era,
-    Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era),
-    ToCBOR (PredicateFailure (Core.EraRule "UTXO" era))
+    Typeable (Script era),
+    Typeable (AuxiliaryData era),
+    ToCBOR (PredicateFailure (EraRule "UTXO" era))
   ) =>
   ToCBOR (UtxowPredicateFailure era)
   where
@@ -227,9 +223,9 @@ instance
 
 instance
   ( Era era,
-    FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
-    Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era)
+    FromCBOR (PredicateFailure (EraRule "UTXO" era)),
+    Typeable (Script era),
+    Typeable (AuxiliaryData era)
   ) =>
   FromCBOR (UtxowPredicateFailure era)
   where
@@ -273,37 +269,37 @@ instance
 --  State Transition System Instances
 
 type ShelleyStyleWitnessNeeds era =
-  ( HasField "_protocolVersion" (Core.PParams era) ProtVer,
+  ( HasField "_protocolVersion" (PParams era) ProtVer,
     ValidateScript era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   )
 
 initialLedgerStateUTXOW ::
   forall era.
-  ( Embed (Core.EraRule "UTXO" era) (UTXOW era),
-    Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
-    State (Core.EraRule "UTXO" era) ~ UTxOState era
+  ( Embed (EraRule "UTXO" era) (UTXOW era),
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    State (EraRule "UTXO" era) ~ UTxOState era
   ) =>
   InitialRule (UTXOW era)
 initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
-  trans @(Core.EraRule "UTXO" era) $ IRC (UtxoEnv slots pp stakepools genDelegs)
+  trans @(EraRule "UTXO" era) $ IRC (UtxoEnv slots pp stakepools genDelegs)
 
 -- | A generic Utxow witnessing function designed to be use across many Eras.
 --   Note the 'embed' argument lifts from the simple Shelley (UtxowPredicateFailure) to
 --   the PredicateFailure (type family) of the context of where it is called.
 transitionRulesUTXOW ::
   forall era utxow.
-  ( Core.EraTx era,
+  ( EraTx era,
     ShelleyEraTxBody era,
     BaseM (utxow era) ~ ShelleyBase,
-    Embed (Core.EraRule "UTXO" era) (utxow era),
-    Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
-    State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ Core.Tx era,
+    Embed (EraRule "UTXO" era) (utxow era),
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    State (EraRule "UTXO" era) ~ UTxOState era,
+    Signal (EraRule "UTXO" era) ~ Tx era,
     Environment (utxow era) ~ UtxoEnv era,
     State (utxow era) ~ UTxOState era,
-    Signal (utxow era) ~ Core.Tx era,
+    Signal (utxow era) ~ Tx era,
     PredicateFailure (utxow era) ~ UtxowPredicateFailure era,
     STS (utxow era),
     ShelleyStyleWitnessNeeds era
@@ -323,7 +319,7 @@ transitionRulesUTXOW = do
   runTestOnSignal $ validateFailedScripts tx
 
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  runTest $ validateMissingScripts pp (scriptsNeeded utxo tx) (Map.keysSet (tx ^. Core.witsTxG . Core.scriptWitsG))
+  runTest $ validateMissingScripts pp (scriptsNeeded utxo tx) (Map.keysSet (tx ^. witsTxG . scriptWitsG))
 
   -- check VKey witnesses
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
@@ -343,14 +339,14 @@ transitionRulesUTXOW = do
   runTest $
     validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
 
-  trans @(Core.EraRule "UTXO" era) $
+  trans @(EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
   ( Era era,
     STS (UTXO era),
-    PredicateFailure (Core.EraRule "UTXO" era) ~ UtxoPredicateFailure era,
-    Event (Core.EraRule "UTXO" era) ~ UtxoEvent era
+    PredicateFailure (EraRule "UTXO" era) ~ UtxoPredicateFailure era,
+    Event (EraRule "UTXO" era) ~ UtxoEvent era
   ) =>
   Embed (UTXO era) (UTXOW era)
   where
@@ -358,16 +354,16 @@ instance
   wrapEvent = UtxoEvent
 
 instance
-  ( Core.EraTx era,
+  ( EraTx era,
     ShelleyEraTxBody era,
-    Core.Tx era ~ ShelleyTx era,
+    Tx era ~ ShelleyTx era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_protocolVersion" (PParams era) ProtVer,
     -- Allow UTXOW to call UTXO
-    Embed (Core.EraRule "UTXO" era) (UTXOW era),
-    Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
-    State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ Core.Tx era,
+    Embed (EraRule "UTXO" era) (UTXOW era),
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    State (EraRule "UTXO" era) ~ UTxOState era,
+    Signal (EraRule "UTXO" era) ~ Tx era,
     ShelleyStyleWitnessNeeds era
   ) =>
   STS (UTXOW era)
@@ -384,8 +380,8 @@ instance
 {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
 validateFailedScripts ::
   forall era.
-  (ValidateScript era, Core.EraTx era) =>
-  Core.Tx era ->
+  (ValidateScript era, EraTx era) =>
+  Tx era ->
   Test (UtxowPredicateFailure era)
 validateFailedScripts tx = do
   let failedScripts =
@@ -393,7 +389,7 @@ validateFailedScripts tx = do
           ( \hs validator ->
               hashScript @era validator /= hs || not (validateScript @era validator tx)
           )
-          (tx ^. Core.witsTxG . Core.scriptWitsG)
+          (tx ^. witsTxG . scriptWitsG)
   failureUnless (Map.null failedScripts) $
     ScriptWitnessNotValidatingUTXOW (Map.keysSet failedScripts)
 
@@ -402,9 +398,9 @@ validateFailedScripts tx = do
 {-  sReceived := Map.keysSet (getField @"scriptWits" tx)         -}
 validateMissingScripts ::
   forall era.
-  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  Core.PParams era ->
+  PParams era ->
   Set (ScriptHash (Crypto era)) ->
   Set (ScriptHash (Crypto era)) ->
   Test (UtxowPredicateFailure era)
@@ -425,41 +421,41 @@ validateMissingScripts pp sNeeded sReceived =
 --  transaction are correct.
 validateVerifiedWits ::
   forall era.
-  ( Core.EraTx era,
+  ( EraTx era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
-  Core.Tx era ->
+  Tx era ->
   Test (UtxowPredicateFailure era)
 validateVerifiedWits tx =
   case failed <> failedBootstrap of
     [] -> pure ()
     nonEmpty -> failure $ InvalidWitnessesUTXOW nonEmpty
   where
-    txBody = tx ^. Core.bodyTxG
+    txBody = tx ^. bodyTxG
     txBodyHash = extractHash (hashAnnotated @(Crypto era) txBody)
     wvkKey (WitVKey k _) = k
     failed =
       wvkKey
         <$> filter
           (not . verifyWitVKey txBodyHash)
-          (Set.toList $ tx ^. Core.witsTxG . Core.addrWitsG)
+          (Set.toList $ tx ^. witsTxG . addrWitsG)
     failedBootstrap =
       bwKey
         <$> filter
           (not . verifyBootstrapWit txBodyHash)
-          (Set.toList $ tx ^. Core.witsTxG . Core.bootAddrWitsG)
+          (Set.toList $ tx ^. witsTxG . bootAddrWitsG)
 
 {-
 validateNeededWitnesses ::
   ( Era era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "wdrls" (TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (TxBody era) (Set (TxIn (Crypto era))),
+    HasField "update" (TxBody era) (StrictMaybe (Update era))
   ) =>
   GenDelegs (Crypto era) ->
   UTxO era ->
-  Core.Tx era ->
+  Tx era ->
   Set (KeyHash 'Witness (Crypto era)) ->
   Test (UtxowPredicateFailure era)
 validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
@@ -473,10 +469,10 @@ validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
 -- from Era to Era, so we parameterise over that function in this test.
 -- That allows it to be used in many Eras.
 validateNeededWitnesses ::
-  (UTxO era -> Core.Tx era -> GenDelegs (Crypto era) -> Set (KeyHash 'Witness (Crypto era))) ->
+  (UTxO era -> Tx era -> GenDelegs (Crypto era) -> Set (KeyHash 'Witness (Crypto era))) ->
   GenDelegs (Crypto era) ->
   UTxO era ->
-  Core.Tx era ->
+  Tx era ->
   Set (KeyHash 'Witness (Crypto era)) ->
   Test (UtxowPredicateFailure era)
 validateNeededWitnesses witsvkeyneeded genDelegs utxo tx witsKeyHashes =
@@ -490,11 +486,11 @@ validateNeededWitnesses witsvkeyneeded genDelegs utxo tx witsKeyHashes =
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded ::
   forall era.
-  ( Core.EraTx era,
+  ( EraTx era,
     ShelleyEraTxBody era
   ) =>
   UTxO era ->
-  Core.Tx era ->
+  Tx era ->
   GenDelegs (Crypto era) ->
   Set (KeyHash 'Witness (Crypto era))
 witsVKeyNeeded utxo' tx genDelegs =
@@ -504,14 +500,14 @@ witsVKeyNeeded utxo' tx genDelegs =
     `Set.union` wdrlAuthors
     `Set.union` updateKeys
   where
-    txBody = tx ^. Core.bodyTxG
+    txBody = tx ^. bodyTxG
     inputAuthors :: Set (KeyHash 'Witness (Crypto era))
-    inputAuthors = foldr accum Set.empty (txBody ^. Core.inputsTxBodyG)
+    inputAuthors = foldr accum Set.empty (txBody ^. inputsTxBodyG)
       where
         accum txin ans =
           case txinLookup txin utxo' of
             Just txOut ->
-              case txOut ^. Core.addrTxOutL of
+              case txOut ^. addrTxOutL of
                 Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
                 AddrBootstrap bootAddr ->
                   Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
@@ -553,27 +549,27 @@ witsVKeyNeeded utxo' tx genDelegs =
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
 validateMetadata ::
   forall era.
-  ( Core.EraTx era,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( EraTx era,
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  Core.PParams era ->
-  Core.Tx era ->
+  PParams era ->
+  Tx era ->
   Test (UtxowPredicateFailure era)
 validateMetadata pp tx =
-  let txBody = tx ^. Core.bodyTxG
+  let txBody = tx ^. bodyTxG
       pv = getField @"_protocolVersion" pp
-   in case (txBody ^. Core.adHashTxBodyG, tx ^. Core.auxiliaryDataTxG) of
+   in case (txBody ^. adHashTxBodyG, tx ^. auxiliaryDataTxG) of
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failure $ MissingTxMetadata mdh
         (SNothing, SJust md') ->
-          failure $ MissingTxBodyMetadataHash (Core.hashAuxiliaryData @era md')
+          failure $ MissingTxBodyMetadataHash (hashAuxiliaryData @era md')
         (SJust mdh, SJust md') ->
           sequenceA_
-            [ failureUnless (Core.hashAuxiliaryData @era md' == mdh) $
-                ConflictingMetadataHash mdh (Core.hashAuxiliaryData @era md'),
+            [ failureUnless (hashAuxiliaryData @era md' == mdh) $
+                ConflictingMetadataHash mdh (hashAuxiliaryData @era md'),
               -- check metadata value sizes
               when (SoftForks.validMetadata pp) $
-                failureUnless (Core.validateAuxiliaryData @era pv md') InvalidMetadata
+                failureUnless (validateAuxiliaryData @era pv md') InvalidMetadata
             ]
 
 -- | check genesis keys signatures for instantaneous rewards certificates
@@ -581,20 +577,20 @@ validateMetadata pp tx =
 -- genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes
 -- { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum
 validateMIRInsufficientGenesisSigs ::
-  ( Core.EraTx era,
+  ( EraTx era,
     ShelleyEraTxBody era
   ) =>
   GenDelegs (Crypto era) ->
   Word64 ->
   Set (KeyHash 'Witness (Crypto era)) ->
-  Core.Tx era ->
+  Tx era ->
   Test (UtxowPredicateFailure era)
 validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKeyHashes tx =
   let genDelegates =
         Set.fromList $ asWitness . genDelegKeyHash <$> Map.elems genMapping
       khAsSet = witsKeyHashes
       genSig = eval (genDelegates ∩ khAsSet)
-      txBody = tx ^. Core.bodyTxG
+      txBody = tx ^. bodyTxG
       mirCerts =
         StrictSeq.forceToStrict
           . Seq.filter isInstantaneousRewards
@@ -611,7 +607,7 @@ instance Inject (UtxowPredicateFailure era) (UtxowPredicateFailure era) where
   inject = id
 
 instance
-  PredicateFailure (Core.EraRule "UTXO" era) ~ UtxoPredicateFailure era =>
+  PredicateFailure (EraRule "UTXO" era) ~ UtxoPredicateFailure era =>
   Inject (UtxoPredicateFailure era) (UtxowPredicateFailure era)
   where
   inject = UtxoFailure

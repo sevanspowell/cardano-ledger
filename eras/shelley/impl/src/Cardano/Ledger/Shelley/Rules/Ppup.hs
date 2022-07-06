@@ -33,8 +33,7 @@ import Cardano.Ledger.BaseTypes
     epochInfoPure,
     invalidKey,
   )
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Shelley.PParams
   ( PPUPState (..),
@@ -65,7 +64,7 @@ import NoThunks.Class (NoThunks (..))
 data PPUP era
 
 data PPUPEnv era
-  = PPUPEnv SlotNo (Core.PParams era) (GenDelegs (Crypto era))
+  = PPUPEnv SlotNo (PParams era) (GenDelegs (Crypto era))
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)
@@ -101,8 +100,8 @@ newtype PpupEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_protocolVersion" (Core.PParamsUpdate era) (StrictMaybe ProtVer)
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   STS (PPUP era)
   where
@@ -153,8 +152,8 @@ instance
 
 ppupTransitionNonEmpty ::
   ( Typeable era,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_protocolVersion" (Core.PParamsUpdate era) (StrictMaybe ProtVer)
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   TransitionRule (PPUP era)
 ppupTransitionNonEmpty = do

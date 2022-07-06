@@ -11,9 +11,8 @@ module Cardano.Ledger.Shelley.API
   )
 where
 
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -34,7 +33,7 @@ class
     Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
     FromSharedCBOR (Core.TxOut era),
     ShelleyEraTxBody era,
-    Core.EraTx era
+    EraTx era
   ) =>
   ShelleyBasedEra era
 

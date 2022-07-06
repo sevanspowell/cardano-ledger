@@ -83,6 +83,13 @@ import Data.Word (Word64)
 import GHC.TypeLits (Symbol)
 import Lens.Micro
 
+--------------------------------------------------------------------------------
+-- Era
+--------------------------------------------------------------------------------
+
+class (CC.Crypto (Crypto era), Typeable era) => Era era where
+  type Crypto era :: Type
+
 -- | A transaction.
 class
   ( EraTxBody era,
@@ -249,29 +256,8 @@ class Era era => EraWitnesses era where
 
   scriptWitsG :: SimpleGetter (Witnesses era) (Map (ScriptHash (Crypto era)) (Script era))
 
--- | Common constraints
---
--- NOTE: 'Ord' is not included, as 'Ord' for a 'Block' or a 'NewEpochState'
--- doesn't make sense.
--- type ChainData t = (Eq t, Show t, NoThunks t, Typeable t)
-
--- -- | Constraints for serialising from/to CBOR
--- type SerialisableData t = (FromCBOR t, ToCBOR t)
-
--- -- | Constraints for serialising from/to CBOR using 'Annotator'
--- type AnnotatedData t = (FromCBOR (Annotator t), ToCBOR t)
-
 -- | Era STS map
 type family EraRule (k :: Symbol) era :: Type
-
---------------------------------------------------------
-
---------------------------------------------------------------------------------
--- Era
---------------------------------------------------------------------------------
-
-class (CC.Crypto (Crypto era), Typeable era) => Era era where
-  type Crypto era :: Type
 
 -----------------------------------------------------------------------------
 -- Script Validation
@@ -317,7 +303,7 @@ class (Era era, SafeToHash (Script era)) => ValidateScript era where
 
 -- | Indicates that an era supports segregated witnessing.
 --
---   This class is embodies an isomorphism between 'TxSeq era' and 'StrictSeq
+--   This class embodies an isomorphism between 'TxSeq era' and 'StrictSeq
 --   (Tx era)', witnessed by 'fromTxSeq' and 'toTxSeq'.
 class Era era => SupportsSegWit era where
   type TxSeq era = (r :: Type) | r -> era
@@ -424,48 +410,3 @@ translateEraMaybe ::
   Maybe (f era)
 translateEraMaybe ctxt =
   either (const Nothing) Just . runExcept . translateEra ctxt
-
--- ==========================================================
--- WellFormed-ness
--- ==========================================================
-
-{-
--- | All Well Formed Eras have this minimal structure.
-type WellFormed era =
-  ( -- TxBody
-    HasField "outputs" (TxBody era) (StrictSeq (TxOut era)),
-    HasField "txfee" (TxBody era) Coin,
-    HasField "minted" (TxBody era) (Set (ScriptHash (Crypto era))),
-    -- HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    -- Tx
-    HasField "body" (Tx era) (TxBody era),
-    HasField "wits" (Tx era) (Witnesses era),
-    HasField "auxiliaryData" (Tx era) (StrictMaybe (AuxiliaryData era)),
-    HasField "txsize" (Tx era) Integer,
-    HasField "scriptWits" (Tx era) (Map (ScriptHash (Crypto era)) (Script era)),
-    -- HashAnnotated
-    HashAnnotated (TxBody era) EraIndependentTxBody (Crypto era),
-    SupportsSegWit era,
-    Val (Value era),
-    Compactible (Value era) -- TxOut stores a CompactForm(Value)
-  )
--}
-{-  TODO, there are a few other constraints which are WellFormed and we should add
-them when time permits. Some are not added because the types they mentions reside
-in files that cause circular import dependencies.
-   -- import Cardano.Ledger.Shelley.TxBody(DCert,Wdrl,WitVKey)
-   -- import Cardano.Ledger.Shelley.Tx(TxIn)
-These would have to be moved into a module such as Cardano.Ledger.TxBase(TxIn,DCert,Wdrl)
-   -- HasField "inputs" (TxBody era) (Set (TxIn (Crypto era))),       -- all possible inputs
-   -- HasField "txinputs_fee" (TxBody era) (Set (TxIn (Crypto era)))  -- inputs that can be used to pay fees
-   -- HasField "certs" (TxBody era) (StrictSeq (DCert (Crypto era))),
-   -- HasField "wdrls" (TxBody era) (Wdrl (Crypto era)),
-   -- HasField "addrWits" (Tx era) (Set (WitVKey 'Witness (Crypto era)))
-others where the concrete type (Update and WitnessSet) will have to be made into a type family
-   -- import Cardano.Ledger.Shelley.PParams (Update)
-   -- import Cardano.Ledger.Shelley.Tx(WitnessSet)
-   -- import Cardano.Ledger.Alonzo.Scripts (ExUnits)
-   -- HasField "update" (TxBody era) (StrictMaybe (Update era)),
-   -- HasField "wits" (Tx era) (WitnessSet era),
-   -- HasField "exUnits" (Tx era) ExUnits,
--}

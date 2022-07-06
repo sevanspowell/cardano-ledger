@@ -252,25 +252,25 @@ data TxBodyRaw era = TxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance
-  NoThunks (Core.PParamsUpdate (ShelleyEra crypto)) =>
+  NoThunks (PParamsUpdate (ShelleyEra crypto)) =>
   NoThunks (TxBodyRaw (ShelleyEra crypto))
 
 deriving instance
-  (CC.Crypto crypto, NFData (Core.PParamsUpdate (ShelleyEra crypto))) =>
+  (CC.Crypto crypto, NFData (PParamsUpdate (ShelleyEra crypto))) =>
   NFData (TxBodyRaw (ShelleyEra crypto))
 
 deriving instance
-  (CC.Crypto crypto, Eq (Core.PParamsUpdate (ShelleyEra crypto))) =>
+  (CC.Crypto crypto, Eq (PParamsUpdate (ShelleyEra crypto))) =>
   Eq (TxBodyRaw (ShelleyEra crypto))
 
 deriving instance
   ( CC.Crypto crypto,
-    Show (Core.PParamsUpdate (ShelleyEra crypto))
+    Show (PParamsUpdate (ShelleyEra crypto))
   ) =>
   Show (TxBodyRaw (ShelleyEra crypto))
 
 instance
-  (FromCBOR (Core.PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (FromCBOR (PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
   FromCBOR (TxBodyRaw (ShelleyEra crypto))
   where
   fromCBOR =
@@ -283,10 +283,10 @@ instance
       )
 
 instance
-  ( ToCBOR (Core.PParamsUpdate (ShelleyEra crypto)),
+  ( ToCBOR (PParamsUpdate (ShelleyEra crypto)),
     Typeable crypto,
     CC.Crypto crypto,
-    FromCBOR (Core.PParamsUpdate (ShelleyEra crypto))
+    FromCBOR (PParamsUpdate (ShelleyEra crypto))
   ) =>
   FromCBOR (Annotator (TxBodyRaw (ShelleyEra crypto)))
   where
@@ -301,7 +301,7 @@ instance
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
 boxBody ::
-  (FromCBOR (Core.PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (FromCBOR (PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
   Word ->
   Field (TxBodyRaw (ShelleyEra crypto))
 boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
@@ -318,7 +318,7 @@ boxBody n = invalidField n
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
 txSparse ::
-  (ToCBOR (Core.PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (ToCBOR (PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
   TxBodyRaw (ShelleyEra crypto) ->
   Encode ('Closed 'Sparse) (TxBodyRaw (ShelleyEra crypto))
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
@@ -348,7 +348,7 @@ baseTxBodyRaw =
     }
 
 instance
-  (ToCBOR (Core.PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (ToCBOR (PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
   ToCBOR (TxBodyRaw (ShelleyEra crypto))
   where
   toCBOR x = encode (txSparse x)
@@ -399,17 +399,17 @@ instance CC.Crypto crypto => ShelleyEraTxBody (ShelleyEra crypto) where
 
 deriving newtype instance
   ( Typeable crypto,
-    NoThunks (Core.PParamsUpdate (ShelleyEra crypto))
+    NoThunks (PParamsUpdate (ShelleyEra crypto))
   ) =>
   NoThunks (TxBody (ShelleyEra crypto))
 
 deriving newtype instance
-  (CC.Crypto crypto, NFData (Core.PParamsUpdate (ShelleyEra crypto))) =>
+  (CC.Crypto crypto, NFData (PParamsUpdate (ShelleyEra crypto))) =>
   NFData (TxBody (ShelleyEra crypto))
 
 deriving instance
   ( CC.Crypto crypto,
-    Show (Core.PParamsUpdate (ShelleyEra crypto))
+    Show (PParamsUpdate (ShelleyEra crypto))
   ) =>
   Show (TxBody (ShelleyEra crypto))
 
@@ -420,14 +420,14 @@ deriving via
   instance
     ( Typeable crypto,
       CC.Crypto crypto,
-      FromCBOR (Core.PParamsUpdate (ShelleyEra crypto)),
-      ToCBOR (Core.PParamsUpdate (ShelleyEra crypto))
+      FromCBOR (PParamsUpdate (ShelleyEra crypto)),
+      ToCBOR (PParamsUpdate (ShelleyEra crypto))
     ) =>
     FromCBOR (Annotator (TxBody (ShelleyEra crypto)))
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
-  (ToCBOR (Core.PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (ToCBOR (PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
   Set (TxIn (Crypto (ShelleyEra crypto))) ->
   StrictSeq (TxOut (ShelleyEra crypto)) ->
   StrictSeq (DCert (Crypto (ShelleyEra crypto))) ->
