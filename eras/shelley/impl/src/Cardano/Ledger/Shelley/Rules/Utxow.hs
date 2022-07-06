@@ -285,7 +285,7 @@ initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
   trans @(EraRule "UTXO" era) $ IRC (UtxoEnv slots pp stakepools genDelegs)
 
--- | A generic Utxow witnessing function designed to be use across many Eras.
+-- | A generic Utxow witnessing function designed to be used across many Eras.
 --   Note the 'embed' argument lifts from the simple Shelley (UtxowPredicateFailure) to
 --   the PredicateFailure (type family) of the context of where it is called.
 transitionRulesUTXOW ::
