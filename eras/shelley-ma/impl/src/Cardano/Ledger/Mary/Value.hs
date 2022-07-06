@@ -126,10 +126,8 @@ newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
   deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData)
 
 -- | The Value representing MultiAssets
-data Value crypto = Value !Integer !(MultiAsset crypto)
+data Value crypto = Value !Integer !(Map (PolicyID crypto) (Map AssetName Integer))
   deriving (Show, Generic)
-
-newtype MultiAsset crypto = MultiAsset (Map (PolicyID crypto) (Map AssetName Integer))
 
 instance CC.Crypto crypto => Eq (Value crypto) where
   x == y = pointwise (==) x y
@@ -258,9 +256,9 @@ encodeMultiAssetMaps = encodeMap toCBOR (encodeMap toCBOR toCBOR)
 decodeMultiAssetMaps ::
   CC.Crypto crypto =>
   Decoder s Integer ->
-  Decoder s (MultiAsset crypto)
+  Decoder s (Map (PolicyID crypto) (Map AssetName Integer))
 decodeMultiAssetMaps decodeAmount =
-  prune . MultiAsset <$> decodeMap fromCBOR (decodeMap fromCBOR decodeAmount)
+  prune <$> decodeMap fromCBOR (decodeMap fromCBOR decodeAmount)
 
 decodeNonNegativeInteger :: Decoder s Integer
 decodeNonNegativeInteger = fromIntegral <$> decodeWord64
@@ -307,7 +305,7 @@ instance
   CC.Crypto crypto =>
   DecodeMint (Value crypto)
   where
-  decodeMint = Value MultiAsset <$> decodeMultiAssetMaps decodeIntegerBounded64
+  decodeMint = Value 0 <$> decodeMultiAssetMaps decodeIntegerBounded64
 
 -- Note: we do not use `decodeInt64` from the cborg library here because the
 -- implementation contains "-- TODO FIXME: overflow"
