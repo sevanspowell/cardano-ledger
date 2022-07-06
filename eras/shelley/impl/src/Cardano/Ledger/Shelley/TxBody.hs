@@ -315,9 +315,9 @@ boxBody n = invalidField n
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
 txSparse ::
-  (ToCBOR (PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
-  TxBodyRaw (ShelleyEra crypto) ->
-  Encode ('Closed 'Sparse) (TxBodyRaw (ShelleyEra crypto))
+  (ToCBOR (TxOut era), ToCBOR (PParamsUpdate era), Era era) =>
+  TxBodyRaw era ->
+  Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
   Keyed (\i o f t c w u h -> TxBodyRaw i o c w f t u h)
     !> Key 0 (E encodeFoldable input) -- We don't have to send these in TxBodyRaw order
@@ -345,8 +345,8 @@ baseTxBodyRaw =
     }
 
 instance
-  (ToCBOR (PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
-  ToCBOR (TxBodyRaw (ShelleyEra crypto))
+  (ToCBOR (TxOut era), ToCBOR (PParamsUpdate era), Era era) =>
+  ToCBOR (TxBodyRaw era)
   where
   toCBOR x = encode (txSparse x)
 
