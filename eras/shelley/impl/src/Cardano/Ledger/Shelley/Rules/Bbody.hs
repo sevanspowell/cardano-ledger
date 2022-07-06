@@ -31,7 +31,6 @@ import Cardano.Ledger.Hashes (EraIndependentBlockBody, EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     LedgerState,
@@ -101,8 +100,7 @@ instance
   NoThunks (BbodyPredicateFailure era)
 
 instance
-  ( UsesTxBody era,
-    UsesAuxiliary era,
+  ( SupportsSegWit era,
     ToCBORGroup (Era.TxSeq era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
@@ -135,7 +133,7 @@ instance
 bbodyTransition ::
   forall era.
   ( STS (BBODY era),
-    UsesTxBody era,
+    SupportsSegWit era,
     ToCBORGroup (Era.TxSeq era),
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,

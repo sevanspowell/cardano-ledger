@@ -136,7 +136,7 @@ data ShelleyGenesis era = ShelleyGenesis
     sgSlotLength :: !NominalDiffTime,
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
-    sgProtocolParams :: !(PParams era),
+    sgProtocolParams :: !(ShelleyPParams era),
     sgGenDelegs :: !(Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era))),
     sgInitialFunds :: LM.ListMap (Addr (Crypto era)) Coin,
     sgStaking :: ShelleyGenesisStaking (Crypto era)

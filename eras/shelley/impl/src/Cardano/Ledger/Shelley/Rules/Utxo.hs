@@ -56,11 +56,6 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (getTxOutAddr, getTxOutBootstrapAddress)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesPParams,
-    UsesScript,
-    UsesValue,
-  )
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.LedgerState.Types
   ( UTxOState (..),
@@ -184,7 +179,7 @@ data UtxoPredicateFailure era
   deriving (Generic)
 
 deriving stock instance
-  ( UsesValue era,
+  ( Show (Value era),
     Show (TxOut era),
     Show (PredicateFailure (EraRule "PPUP" era))
   ) =>
@@ -304,10 +299,9 @@ instance
   ( EraTx era,
     ShelleyEraTxBody era,
     TxOut era ~ ShelleyTxOut era,
-    UsesValue era,
-    UsesScript era,
-    UsesPParams era,
+    Show (Value era),
     Show (Witnesses era),
+    Show (PParamsUpdate era),
     TxBody era ~ ShelleyTxBody era,
     PParams era ~ ShelleyPParams era,
     Tx era ~ ShelleyTx era,
@@ -349,11 +343,11 @@ instance
         (\_ st' -> _deposited st' >= mempty),
       let utxoBalance us = Val.inject (_deposited us <> _fees us) <> balance (_utxo us)
           withdrawals :: ShelleyTxBody era -> Value era
-          withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWdrl $ txb ^. txBodyWdrlsG
+          withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWdrl $ txb ^. wdrlsTxBodyG
        in PostCondition
             "Should preserve value in the UTxO state"
             ( \(TRC (_, us, tx)) us' ->
-                utxoBalance us <> withdrawals (tx ^. txBodyG) == utxoBalance us'
+                utxoBalance us <> withdrawals (tx ^. bodyTxG) == utxoBalance us'
             )
     ]
 
@@ -384,7 +378,7 @@ utxoInductive ::
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo _ _ ppup _ = u
-  let txb = tx ^. txBodyG
+  let txb = tx ^. bodyTxG
 
   {- txttl txb ≥ slot -}
   runTest $ validateTimeToLive txb slot
@@ -396,12 +390,12 @@ utxoInductive = do
   runTest $ validateFeeTooSmallUTxO pp tx
 
   {- txins txb ⊆ dom utxo -}
-  runTest $ validateBadInputsUTxO utxo $ txb ^. txBodyInputsG
+  runTest $ validateBadInputsUTxO utxo $ txb ^. inputsTxBodyG
 
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runTest . validateWrongNetwork netId . toList $ txb ^. txBodyOutputsG
+  runTest . validateWrongNetwork netId . toList $ txb ^. outputsTxBodyG
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
   runTest $ validateWrongNetworkWithdrawal netId txb
@@ -423,7 +417,7 @@ utxoInductive = do
   runTest $ validateMaxTxSizeUTxO pp tx
 
   let refunded = keyRefunds pp txb
-  let txCerts = toList $ txb ^. txBodyCertsG
+  let txCerts = toList $ txb ^. certsTxBodyG
   let totalDeposits' = totalDeposits pp (`Map.notMember` stakepools) txCerts
   tellEvent $ TotalDeposits totalDeposits'
   let depositChange = totalDeposits' <-> refunded
@@ -440,7 +434,7 @@ validateTimeToLive ::
   Test (UtxoPredicateFailure era)
 validateTimeToLive txb slot = failureUnless (ttl >= slot) $ ExpiredUTxO ttl slot
   where
-    ttl = txb ^. txBodyTtlG
+    ttl = txb ^. ttlTxBodyG
 
 -- | Ensure that there is at least one input in the `TxBody`
 --
@@ -452,7 +446,7 @@ validateInputSetEmptyUTxO ::
 validateInputSetEmptyUTxO txb =
   failureUnless (txins /= Set.empty) InputSetEmptyUTxO
   where
-    txins = txb ^. txBodyInputsG
+    txins = txb ^. inputsTxBodyG
 
 -- | Ensure that the fee is at least the amount specified by the `minfee`
 --
@@ -469,8 +463,8 @@ validateFeeTooSmallUTxO pp tx =
   failureUnless (minFee <= txFee) $ FeeTooSmallUTxO minFee txFee
   where
     minFee = minfee pp tx
-    txFee = txb ^. txBodyTxFeeG
-    txb = tx ^. txBodyG
+    txFee = txb ^. txFeeTxBodyG
+    txb = tx ^. bodyTxG
 
 -- | Ensure all transaction inputs are present in `UTxO`
 --
@@ -516,7 +510,7 @@ validateWrongNetworkWithdrawal netId txb =
     wdrlsWrongNetwork =
       filter
         (\a -> getRwdNetwork a /= netId)
-        (Map.keys . unWdrl $ txb ^. txBodyWdrlsG)
+        (Map.keys . unWdrl $ txb ^. wdrlsTxBodyG)
 
 -- | Ensure that value consumed and produced matches up exactly
 --
@@ -557,7 +551,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
     -- amounts are non-negative)
     outputsTooSmall =
       filter
-        (\txOut -> txOut ^. txOutCoinL < minUTxOValue)
+        (\txOut -> txOut ^. coinTxOutL < minUTxOValue)
         (Map.elems outputs)
 
 -- | Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
@@ -594,7 +588,7 @@ validateMaxTxSizeUTxO pp tx =
   failureUnless (txSize <= maxTxSize) $ MaxTxSizeUTxO txSize maxTxSize
   where
     maxTxSize = toInteger (getField @"_maxTxSize" pp)
-    txSize = tx ^. txSizeG
+    txSize = tx ^. sizeTxG
 
 updateUTxOState ::
   EraTxBody era =>
@@ -607,14 +601,14 @@ updateUTxOState UTxOState {_utxo, _deposited, _fees, _stakeDistro} txb depositCh
   let UTxO utxo = _utxo
       !utxoAdd = txouts txb -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
-      !(utxoWithout, utxoDel) = extractKeys utxo (txb ^. txBodyInputsG)
+      !(utxoWithout, utxoDel) = extractKeys utxo (txb ^. inputsTxBodyG)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
       newIncStakeDistro = updateStakeDistribution _stakeDistro (UTxO utxoDel) utxoAdd
    in UTxOState
         { _utxo = UTxO newUTxO,
           _deposited = _deposited <> depositChange,
-          _fees = _fees <> txb ^. txBodyTxFeeG,
+          _fees = _fees <> txb ^. txFeeTxBodyG,
           _ppups = ppups,
           _stakeDistro = newIncStakeDistro
         }

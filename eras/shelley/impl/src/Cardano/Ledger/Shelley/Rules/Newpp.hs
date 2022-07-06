@@ -18,7 +18,6 @@ where
 
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
@@ -81,7 +80,7 @@ instance
     HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_maxBHSize" (Core.PParams era) Natural,
     HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer),
+    HasField "_protocolVersion" (Core.PParamsUpdate era) (StrictMaybe ProtVer),
     Typeable era
   ) =>
   STS (NEWPP era)
@@ -104,7 +103,7 @@ newPpTransition ::
     HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_maxBHSize" (Core.PParams era) Natural,
     HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer)
+    HasField "_protocolVersion" (Core.PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   TransitionRule (NEWPP era)
 newPpTransition = do
@@ -140,7 +139,7 @@ newPpTransition = do
 -- provided the new proposals can follow (otherwise reset them).
 updatePpup ::
   ( HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer)
+    HasField "_protocolVersion" (Core.PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   PPUPState era ->
   Core.PParams era ->

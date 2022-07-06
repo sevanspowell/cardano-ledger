@@ -28,6 +28,7 @@ import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.EpochBoundary
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))
@@ -58,7 +59,7 @@ hashFromShortBytesE sbs =
     Nothing ->
       error $ "hashFromBytesShort called with ShortByteString of the wrong length: " <> show sbs
 
-translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> TxOut (ShelleyEra c)
+translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> ShelleyTxOut (ShelleyEra c)
 translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
   TxOutCompact
     (UnsafeCompactAddr (Byron.unsafeGetCompactAddress compactAddr))
@@ -112,7 +113,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
          in UTxO redeemers
     }
   where
-    pparams :: PParams (ShelleyEra c)
+    pparams :: ShelleyPParams (ShelleyEra c)
     pparams = sgProtocolParams genesisShelley
 
     -- NOTE: we ignore the Byron delegation map because the genesis and

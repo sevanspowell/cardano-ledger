@@ -125,7 +125,7 @@ depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
     currentPool = (_deposited . lsUTxOState) ls
     pools = _pParams . dpsPState . lsDPState $ ls
     txDeposits =
-      totalDeposits pp (`Map.notMember` pools) (toList $ txBody ^. txBodyCertsG)
+      totalDeposits pp (`Map.notMember` pools) (toList $ txBody ^. certsTxBodyG)
     txRefunds = keyRefunds pp txBody
 
 reapRewards ::

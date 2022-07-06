@@ -164,13 +164,13 @@ type Tx era = ShelleyTx era
 instance CC.Crypto crypto => Core.EraTx (ShelleyEra crypto) where
   type Tx (ShelleyEra crypto) = ShelleyTx (ShelleyEra crypto)
 
-  txBodyG = to (\(TxConstr (Memo tx _)) -> _body tx)
+  bodyTxG = to (\(TxConstr (Memo tx _)) -> _body tx)
 
-  txWitsG = to (\(TxConstr (Memo tx _)) -> _wits tx)
+  witsTxG = to (\(TxConstr (Memo tx _)) -> _wits tx)
 
-  txAuxiliaryDataG = to (\(TxConstr (Memo tx _)) -> _auxiliaryData tx)
+  auxiliaryDataTxG = to (\(TxConstr (Memo tx _)) -> _auxiliaryData tx)
 
-  txSizeG = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
+  sizeTxG = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
 
 deriving newtype instance
   ( NFData (Core.TxBody (ShelleyEra crypto)),
@@ -363,7 +363,7 @@ instance Era era => ToCBOR (WitnessSetHKD Identity era) where
   toCBOR = encodePreEncoded . BSL.toStrict . txWitsBytes
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  (Era era, ToCBOR (Core.Script era)) =>
   Semigroup (WitnessSetHKD Identity era)
   where
   (WitnessSet' a b c _) <> y | Set.null a && Map.null b && Set.null c = y
@@ -372,13 +372,13 @@ instance
     WitnessSet (a <> a') (b <> b') (c <> c')
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  (Era era, ToCBOR (Core.Script era)) =>
   Monoid (WitnessSetHKD Identity era)
   where
   mempty = WitnessSet mempty mempty mempty
 
 pattern WitnessSet ::
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  (Era era, ToCBOR (Core.Script era)) =>
   Set (WitVKey 'Witness (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Core.Script era) ->
   Set (BootstrapWitness (Crypto era)) ->
@@ -556,14 +556,14 @@ validateNativeMultiSigScript ::
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
   where
-    vhks = Set.map witVKeyHash (addrWits' (tx ^. Core.txWitsG))
+    vhks = Set.map witVKeyHash (addrWits' (tx ^. Core.witsTxG))
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
   CC.Crypto crypto =>
   Tx (ShelleyEra crypto) ->
   Map (ScriptHash crypto) (Core.Script (ShelleyEra crypto))
-txwitsScript tx = tx ^. Core.txWitsG . Core.scriptWitsG
+txwitsScript tx = tx ^. Core.witsTxG . Core.scriptWitsG
 
 extractKeyHashWitnessSet ::
   forall (r :: KeyRole) crypto.
@@ -586,7 +586,7 @@ minfee ::
 minfee pp tx =
   Coin $
     fromIntegral (getField @"_minfeeA" pp)
-      * tx ^. Core.txSizeG + fromIntegral (getField @"_minfeeB" pp)
+      * tx ^. Core.sizeTxG + fromIntegral (getField @"_minfeeB" pp)
 
 -- | Extract the witness hashes from the Transaction.
 witsFromTxWitnesses ::
@@ -594,8 +594,8 @@ witsFromTxWitnesses ::
   Core.Tx era ->
   Set (KeyHash 'Witness (Crypto era))
 witsFromTxWitnesses tx =
-  Set.map witVKeyHash (tx ^. Core.txWitsG . Core.addrWitsG)
-    `Set.union` Set.map bootstrapWitKeyHash (tx ^. Core.txWitsG . Core.bootAddrWitsG)
+  Set.map witVKeyHash (tx ^. Core.witsTxG . Core.addrWitsG)
+    `Set.union` Set.map bootstrapWitKeyHash (tx ^. Core.witsTxG . Core.bootAddrWitsG)
 
 -- | Convenience Function to bound the txsize function.
 -- | It can be helpful for coin selection.
@@ -614,12 +614,12 @@ txsizeBound Proxy tx = numInputs * inputSize + numOutputs * outputSize + rest
     addrHashLen = 28
     addrHeader = 1
     address = 2 + addrHeader + 2 * addrHashLen
-    txbody = tx ^. Core.txBodyG
-    numInputs = toInteger . length $ txbody ^. Core.txBodyInputsG
+    txbody = tx ^. Core.bodyTxG
+    numInputs = toInteger . length $ txbody ^. Core.inputsTxBodyG
     inputSize = smallArray + uint + hashObj
-    numOutputs = toInteger . length $ txbody ^. Core.txBodyOutputsG
+    numOutputs = toInteger . length $ txbody ^. Core.outputsTxBodyG
     outputSize = smallArray + uint + address
-    rest = tx ^. Core.txSizeG
+    rest = tx ^. Core.sizeTxG
 
 instance CC.Crypto crypto => Core.EraAuxiliaryData (ShelleyEra crypto) where
   type AuxiliaryData (ShelleyEra crypto) = Metadata (ShelleyEra crypto)

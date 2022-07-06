@@ -23,7 +23,6 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShots, obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
@@ -99,8 +98,7 @@ data EpochEvent era
   | UpecEvent (Event (Core.EraRule "UPEC" era))
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
+  ( Core.EraTxOut era,
     Embed (Core.EraRule "SNAP" era) (EPOCH era),
     Environment (Core.EraRule "SNAP" era) ~ LedgerState era,
     State (Core.EraRule "SNAP" era) ~ SnapShots (Crypto era),
@@ -211,8 +209,7 @@ epochTransition = do
       }
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
+  ( Core.EraTxOut era,
     PredicateFailure (Core.EraRule "SNAP" era) ~ SnapPredicateFailure era,
     Event (Core.EraRule "SNAP" era) ~ SnapEvent era
   ) =>

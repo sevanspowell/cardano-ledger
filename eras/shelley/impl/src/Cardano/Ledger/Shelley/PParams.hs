@@ -9,6 +9,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains just the type of protocol parameters.
 module Cardano.Ledger.Shelley.PParams
@@ -49,10 +50,12 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (PParamsDelta)
+import qualified Cardano.Ledger.Crypto as CC
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
@@ -88,6 +91,10 @@ import Numeric.Natural (Natural)
 type PParams era = ShelleyPParams era
 
 {-# DEPRECATED PParams "Use `ShelleyPParams` instead" #-}
+
+type PParamsUpdate era = PParams' StrictMaybe era
+
+{-# DEPRECATED PParamsUpdate "Use `ShelleyPParamsUpdate` instead" #-}
 
 
 -- | Protocol parameters.
@@ -154,15 +161,24 @@ data PParams' f era = PParams
 
 type ShelleyPParams era = PParams' Identity era
 
+type ShelleyPParamsUpdate era = PParams' StrictMaybe era
+
+
+instance CC.Crypto crypto => Core.EraPParams (ShelleyEra crypto) where
+  type PParams (ShelleyEra crypto) = ShelleyPParams (ShelleyEra crypto)
+  type PParamsUpdate (ShelleyEra crypto) = ShelleyPParamsUpdate (ShelleyEra crypto)
+
+  applyPPUpdates = updatePParams
+
 deriving instance Eq (PParams' Identity era)
 
 deriving instance Show (PParams' Identity era)
 
 deriving instance NFData (PParams' Identity era)
 
-instance NoThunks (PParams era)
+instance NoThunks (ShelleyPParams era)
 
-instance (Era era) => ToCBOR (PParams era) where
+instance (Era era) => ToCBOR (ShelleyPParams era) where
   toCBOR
     PParams
       { _minfeeA = minfeeA',
@@ -202,7 +218,7 @@ instance (Era era) => ToCBOR (PParams era) where
         <> toCBOR minUTxOValue'
         <> toCBOR minPoolCost'
 
-instance (Era era) => FromCBOR (PParams era) where
+instance (Era era) => FromCBOR (ShelleyPParams era) where
   fromCBOR = do
     decodeRecordNamed "PParams" (const 18) $
       PParams
@@ -224,7 +240,7 @@ instance (Era era) => FromCBOR (PParams era) where
         <*> fromCBOR -- _minUTxOValue    :: Natural
         <*> fromCBOR -- _minPoolCost     :: Natural
 
-instance ToJSON (PParams era) where
+instance ToJSON (ShelleyPParams era) where
   toJSON pp =
     Aeson.object
       [ "minFeeA" .= _minfeeA pp,
@@ -246,7 +262,7 @@ instance ToJSON (PParams era) where
         "minPoolCost" .= _minPoolCost pp
       ]
 
-instance FromJSON (PParams era) where
+instance FromJSON (ShelleyPParams era) where
   parseJSON =
     Aeson.withObject "PParams" $ \obj ->
       PParams
@@ -268,11 +284,11 @@ instance FromJSON (PParams era) where
         <*> obj .:? "minUTxOValue" .!= mempty
         <*> obj .:? "minPoolCost" .!= mempty
 
-instance Default (PParams era) where
+instance Default (ShelleyPParams era) where
   def = emptyPParams
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
-emptyPParams :: PParams era
+emptyPParams :: ShelleyPParams era
 emptyPParams =
   PParams
     { _minfeeA = 0,
@@ -299,20 +315,20 @@ data Update era
   = Update !(ProposedPPUpdates era) !EpochNo
   deriving (Generic)
 
-deriving instance Eq (PParamsDelta era) => Eq (Update era)
+deriving instance Eq (Core.PParamsUpdate era) => Eq (Update era)
 
-deriving instance NFData (PParamsDelta era) => NFData (Update era)
+deriving instance NFData (Core.PParamsUpdate era) => NFData (Update era)
 
-deriving instance Show (PParamsDelta era) => Show (Update era)
+deriving instance Show (Core.PParamsUpdate era) => Show (Update era)
 
-instance NoThunks (PParamsDelta era) => NoThunks (Update era)
+instance NoThunks (Core.PParamsUpdate era) => NoThunks (Update era)
 
-instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (Update era) where
+instance (Era era, ToCBOR (Core.PParamsUpdate era)) => ToCBOR (Update era) where
   toCBOR (Update ppUpdate e) =
     encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
 
 instance
-  (Era era, FromCBOR (PParamsDelta era)) =>
+  (Era era, FromCBOR (Core.PParamsUpdate era)) =>
   FromCBOR (Update era)
   where
   fromCBOR = decode $ RecD Update <! From <! From
@@ -321,8 +337,6 @@ data PPUpdateEnv era = PPUpdateEnv SlotNo (GenDelegs era)
   deriving (Show, Eq, Generic)
 
 instance NoThunks (PPUpdateEnv era)
-
-type PParamsUpdate era = PParams' StrictMaybe era
 
 deriving instance Eq (PParams' StrictMaybe era)
 
@@ -415,25 +429,25 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
 
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates era
-  = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (PParamsDelta era))
+  = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (Core.PParamsUpdate era))
   deriving (Generic)
 
-deriving instance Eq (PParamsDelta era) => Eq (ProposedPPUpdates era)
+deriving instance Eq (Core.PParamsUpdate era) => Eq (ProposedPPUpdates era)
 
-deriving instance NFData (PParamsDelta era) => NFData (ProposedPPUpdates era)
+deriving instance NFData (Core.PParamsUpdate era) => NFData (ProposedPPUpdates era)
 
-deriving instance Show (PParamsDelta era) => Show (ProposedPPUpdates era)
+deriving instance Show (Core.PParamsUpdate era) => Show (ProposedPPUpdates era)
 
-instance NoThunks (PParamsDelta era) => NoThunks (ProposedPPUpdates era)
+instance NoThunks (Core.PParamsUpdate era) => NoThunks (ProposedPPUpdates era)
 
 instance
-  (Era era, ToCBOR (PParamsDelta era)) =>
+  (Era era, ToCBOR (Core.PParamsUpdate era)) =>
   ToCBOR (ProposedPPUpdates era)
   where
   toCBOR (ProposedPPUpdates m) = mapToCBOR m
 
 instance
-  (Era era, FromCBOR (PParamsDelta era)) =>
+  (Era era, FromCBOR (Core.PParamsUpdate era)) =>
   FromCBOR (ProposedPPUpdates era)
   where
   fromCBOR = ProposedPPUpdates <$> mapFromCBOR
@@ -469,20 +483,20 @@ data PPUPState era = PPUPState
   }
   deriving (Generic)
 
-deriving instance Show (PParamsDelta era) => Show (PPUPState era)
+deriving instance Show (Core.PParamsUpdate era) => Show (PPUPState era)
 
-deriving instance Eq (PParamsDelta era) => Eq (PPUPState era)
+deriving instance Eq (Core.PParamsUpdate era) => Eq (PPUPState era)
 
-deriving instance NFData (PParamsDelta era) => NFData (PPUPState era)
+deriving instance NFData (Core.PParamsUpdate era) => NFData (PPUPState era)
 
-instance NoThunks (PParamsDelta era) => NoThunks (PPUPState era)
+instance NoThunks (Core.PParamsUpdate era) => NoThunks (PPUPState era)
 
-instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (PPUPState era) where
+instance (Era era, ToCBOR (Core.PParamsUpdate era)) => ToCBOR (PPUPState era) where
   toCBOR (PPUPState ppup fppup) =
     encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
 
 instance
-  (Era era, FromCBOR (PParamsDelta era)) =>
+  (Era era, FromCBOR (Core.PParamsUpdate era)) =>
   FromCBOR (PPUPState era)
   where
   fromCBOR =

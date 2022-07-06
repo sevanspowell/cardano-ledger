@@ -31,25 +31,25 @@ import Lens.Micro
 -- It is therefore neccessary that this function account for all the
 -- different types of inputs inside a transaction.
 getAllTxInputs :: EraTxBody era => TxBody era -> Set (TxIn (Crypto era))
-getAllTxInputs txBody = txBody ^. txBodyAllInputsG
+getAllTxInputs txBody = txBody ^. allInputsTxBodyG
 
 getTxOutEitherAddr ::
   EraTxOut era =>
   TxOut era ->
   Either (Addr (Crypto era)) (CompactAddr (Crypto era))
-getTxOutEitherAddr txOut = txOut ^. txOutAddrEitherL
+getTxOutEitherAddr txOut = txOut ^. addrEitherTxOutL
 
 getTxOutAddr ::
   EraTxOut era =>
   TxOut era ->
   Addr (Crypto era)
-getTxOutAddr txOut = txOut ^. txOutAddrL
+getTxOutAddr txOut = txOut ^. addrTxOutL
 
 getTxOutCompactAddr ::
   EraTxOut era =>
   TxOut era ->
   CompactAddr (Crypto era)
-getTxOutCompactAddr txOut = txOut ^. txOutCompactAddrL
+getTxOutCompactAddr txOut = txOut ^. compactAddrTxOutL
 
 -- | Get the Bootsrap address from the TxOut. Returns `Nothing` if it is a
 -- Shelley address or newer

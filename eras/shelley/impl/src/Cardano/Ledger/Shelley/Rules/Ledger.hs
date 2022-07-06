@@ -51,9 +51,8 @@ import Cardano.Ledger.Shelley.Rules.Delegs
   )
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UTXOW, UtxowPredicateFailure)
-import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody)
+import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody, ShelleyEraTxBody (..))
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition
   ( Assertion (..),
@@ -67,12 +66,11 @@ import Control.State.Transition
   )
 import Data.Coders (decodeRecordSum)
 import Data.Sequence (Seq)
-import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set (Set)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField, getField)
+import GHC.Records (HasField)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- ========================================================
@@ -155,9 +153,9 @@ instance
     Show (Core.Tx era),
     Show (Core.TxOut era),
     Show (State (Core.EraRule "PPUP" era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    Era era,
+    Core.EraTx era,
+    ShelleyEraTxBody era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
@@ -166,7 +164,6 @@ instance
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin
   ) =>
@@ -201,7 +198,8 @@ instance
 
 ledgerTransition ::
   forall era.
-  ( Era era,
+  ( Core.EraTx era,
+    ShelleyEraTxBody era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
@@ -209,8 +207,7 @@ ledgerTransition ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era
   ) =>
   TransitionRule (LEDGER era)
 ledgerTransition = do
@@ -221,7 +218,7 @@ ledgerTransition = do
       TRC
         ( DelegsEnv slot txIx pp tx account,
           dpstate,
-          StrictSeq.fromStrict $ getField @"certs" $ getField @"body" tx
+          StrictSeq.fromStrict $ tx ^. Core.bodyTxG . certsTxBodyG
         )
 
   let DPState dstate pstate = dpstate

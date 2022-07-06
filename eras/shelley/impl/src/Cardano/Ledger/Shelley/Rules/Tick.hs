@@ -27,7 +27,6 @@ import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (GenDelegs (..))
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (_pstakeMark))
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
@@ -198,9 +197,7 @@ bheadTransition = do
   pure nes''
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
-    STS (NEWEPOCH era),
+  ( STS (NEWEPOCH era),
     PredicateFailure (Core.EraRule "NEWEPOCH" era) ~ NewEpochPredicateFailure era,
     Event (Core.EraRule "NEWEPOCH" era) ~ NewEpochEvent era
   ) =>
@@ -246,9 +243,7 @@ deriving stock instance
   Eq (TickfPredicateFailure era)
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
-    NoThunks (PredicateFailure (Core.EraRule "NEWEPOCH" era))
+  ( NoThunks (PredicateFailure (Core.EraRule "NEWEPOCH" era))
   ) =>
   NoThunks (TickfPredicateFailure era)
 
@@ -283,9 +278,7 @@ instance
     ]
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
-    STS (NEWEPOCH era),
+  ( STS (NEWEPOCH era),
     PredicateFailure (Core.EraRule "NEWEPOCH" era) ~ NewEpochPredicateFailure era,
     Event (Core.EraRule "NEWEPOCH" era) ~ NewEpochEvent era
   ) =>

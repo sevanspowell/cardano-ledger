@@ -23,7 +23,6 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
-import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (_delegations, _stake),
     SnapShots (_feeSS, _pstakeGo, _pstakeMark, _pstakeSet),
@@ -61,7 +60,7 @@ instance NoThunks (SnapPredicateFailure era)
 newtype SnapEvent era
   = StakeDistEvent (Map (Credential 'Staking (Crypto era)) (Coin, KeyHash 'StakePool (Crypto era)))
 
-instance (EraTxOut era, UsesValue era) => STS (SNAP era) where
+instance EraTxOut era => STS (SNAP era) where
   type State (SNAP era) = SnapShots (Crypto era)
   type Signal (SNAP era) = ()
   type Environment (SNAP era) = LedgerState era

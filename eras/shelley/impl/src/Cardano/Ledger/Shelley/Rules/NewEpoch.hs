@@ -33,7 +33,6 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (Reward, sumRewards)
@@ -92,8 +91,7 @@ data NewEpochEvent era
   | TotalAdaPotsEvent AdaPots
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
+  ( Core.EraTxOut era,
     Embed (Core.EraRule "MIR" era) (NEWEPOCH era),
     Embed (Core.EraRule "EPOCH" era) (NEWEPOCH era),
     Environment (Core.EraRule "MIR" era) ~ (),
@@ -137,7 +135,8 @@ instance
 
 newEpochTransition ::
   forall era.
-  ( Embed (Core.EraRule "MIR" era) (NEWEPOCH era),
+  ( Core.EraTxOut era,
+    Embed (Core.EraRule "MIR" era) (NEWEPOCH era),
     Embed (Core.EraRule "EPOCH" era) (NEWEPOCH era),
     Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era),
     Environment (Core.EraRule "MIR" era) ~ (),
@@ -147,8 +146,6 @@ newEpochTransition ::
     State (Core.EraRule "EPOCH" era) ~ EpochState era,
     Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    UsesTxOut era,
-    UsesValue era,
     Default (State (Core.EraRule "PPUP" era)),
     Default (Core.PParams era),
     Default (StashedAVVMAddresses era),
@@ -224,9 +221,7 @@ calculatePoolDistr (SnapShot stake delegs poolParams) =
           (toMap (VMap.map _poolVrf poolParams))
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
-    STS (EPOCH era),
+  ( STS (EPOCH era),
     PredicateFailure (Core.EraRule "EPOCH" era) ~ EpochPredicateFailure era,
     Event (Core.EraRule "EPOCH" era) ~ EpochEvent era
   ) =>

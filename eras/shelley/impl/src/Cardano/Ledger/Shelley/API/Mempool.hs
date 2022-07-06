@@ -36,7 +36,6 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
-import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
   ( Era,
@@ -102,12 +101,9 @@ translateValidated ::
 translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
 
 class
-  ( ChainData (Core.Tx era),
-    AnnotatedData (Core.Tx era),
-    Eq (ApplyTxError era),
+  ( Eq (ApplyTxError era),
     Show (ApplyTxError era),
     Typeable (ApplyTxError era),
-    SerialisableData (ApplyTxError era),
     STS (Core.EraRule "LEDGER" era),
     BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,

@@ -27,13 +27,7 @@ module Cardano.Ledger.Core
     EraWitnesses (..),
     Value,
     Script,
-    PParams,
-    PParamsDelta,
-
-    -- * Constraint synonyms
-    ChainData,
-    SerialisableData,
-    AnnotatedData,
+    EraPParams (..),
 
     -- * Era STS
     EraRule,
@@ -52,7 +46,7 @@ where
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.AuxiliaryData ( AuxiliaryDataHash )
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
@@ -88,7 +82,6 @@ import Data.Void (Void, absurd)
 import Data.Word (Word64)
 import GHC.TypeLits (Symbol)
 import Lens.Micro
-import NoThunks.Class (NoThunks)
 
 -- | A transaction.
 class
@@ -102,17 +95,19 @@ class
   where
   type Tx era = (r :: Type) | r -> era
 
-  txBodyG :: SimpleGetter (Tx era) (TxBody era)
+  bodyTxG :: SimpleGetter (Tx era) (TxBody era)
 
-  txWitsG :: SimpleGetter (Tx era) (Witnesses era)
+  witsTxG :: SimpleGetter (Tx era) (Witnesses era)
 
-  txAuxiliaryDataG :: SimpleGetter (Tx era) (StrictMaybe (AuxiliaryData era))
+  auxiliaryDataTxG :: SimpleGetter (Tx era) (StrictMaybe (AuxiliaryData era))
 
-  txSizeG :: SimpleGetter (Tx era) Integer
+  sizeTxG :: SimpleGetter (Tx era) Integer
 
 class
   ( EraTxOut era,
     HashAnnotated (TxBody era) EraIndependentTxBody (Crypto era),
+    FromCBOR (Annotator (TxBody era)),
+    ToCBOR (TxBody era),
     NFData (TxBody era),
     Eq (TxBody era)
   ) =>
@@ -121,17 +116,17 @@ class
   -- | The body of a transaction.
   type TxBody era = (r :: Type) | r -> era
 
-  txBodyInputsG :: SimpleGetter (TxBody era) (Set (TxIn (Crypto era)))
+  inputsTxBodyG :: SimpleGetter (TxBody era) (Set (TxIn (Crypto era)))
 
-  txBodyOutputsG :: SimpleGetter (TxBody era) (StrictSeq (TxOut era))
+  outputsTxBodyG :: SimpleGetter (TxBody era) (StrictSeq (TxOut era))
 
-  txBodyTxFeeG :: SimpleGetter (TxBody era) Coin
+  txFeeTxBodyG :: SimpleGetter (TxBody era) Coin
 
-  txBodyMintedG :: SimpleGetter (TxBody era) (Set (ScriptHash (Crypto era)))
+  mintedTxBodyG :: SimpleGetter (TxBody era) (Set (ScriptHash (Crypto era)))
 
-  txBodyAllInputsG :: SimpleGetter (TxBody era) (Set (TxIn (Crypto era)))
+  allInputsTxBodyG :: SimpleGetter (TxBody era) (Set (TxIn (Crypto era)))
 
-  txBodyAdHashG :: SimpleGetter (TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
+  adHashTxBodyG :: SimpleGetter (TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
 
 -- | Abstract interface into specific fields of a `TxOut`
 class
@@ -154,52 +149,52 @@ class
 
   mkBasicTxOut :: Addr (Crypto era) -> Value era -> TxOut era
 
-  txOutCoinL :: Lens' (TxOut era) Coin
-  txOutCoinL =
+  coinTxOutL :: Lens' (TxOut era) Coin
+  coinTxOutL =
     lens
-      (\txOut -> coin (txOut ^. txOutValueL))
-      (\txOut c -> txOut & txOutValueL .~ modifyCoin (const c) (txOut ^. txOutValueL))
+      (\txOut -> coin (txOut ^. valueTxOutL))
+      (\txOut c -> txOut & valueTxOutL .~ modifyCoin (const c) (txOut ^. valueTxOutL))
 
-  txOutValueL :: Lens' (TxOut era) (Value era)
-  txOutValueL =
+  valueTxOutL :: Lens' (TxOut era) (Value era)
+  valueTxOutL =
     lens
-      ( \txOut -> case txOut ^. txOutValueEitherL of
+      ( \txOut -> case txOut ^. valueEitherTxOutL of
           Left value -> value
           Right cValue -> fromCompact cValue
       )
-      (\txOut value -> txOut & txOutValueEitherL .~ Left value)
+      (\txOut value -> txOut & valueEitherTxOutL .~ Left value)
 
-  txOutCompactValueL :: Lens' (TxOut era) (CompactForm (Value era))
-  txOutCompactValueL =
+  compactValueTxOutL :: Lens' (TxOut era) (CompactForm (Value era))
+  compactValueTxOutL =
     lens
-      ( \txOut -> case txOut ^. txOutValueEitherL of
+      ( \txOut -> case txOut ^. valueEitherTxOutL of
           Left value ->
             fromMaybe (error $ "Illegal value in TxOut: " <> show value) $ toCompact value
           Right cValue -> cValue
       )
-      (\txOut cValue -> txOut & txOutValueEitherL .~ Right cValue)
+      (\txOut cValue -> txOut & valueEitherTxOutL .~ Right cValue)
 
   -- | Lens for getting and setting in TxOut either an address or its compact
   -- version by doing the least amount of work.
-  txOutValueEitherL :: Lens' (TxOut era) (Either (Value era) (CompactForm (Value era)))
+  valueEitherTxOutL :: Lens' (TxOut era) (Either (Value era) (CompactForm (Value era)))
 
-  txOutAddrL :: Lens' (TxOut era) (Addr (Crypto era))
-  txOutAddrL =
+  addrTxOutL :: Lens' (TxOut era) (Addr (Crypto era))
+  addrTxOutL =
     lens
-      ( \txOut -> case txOut ^. txOutAddrEitherL of
+      ( \txOut -> case txOut ^. addrEitherTxOutL of
           Left addr -> addr
           Right cAddr -> decompactAddr cAddr
       )
-      (\txOut addr -> txOut & txOutAddrEitherL .~ Left addr)
+      (\txOut addr -> txOut & addrEitherTxOutL .~ Left addr)
 
-  txOutCompactAddrL :: Lens' (TxOut era) (CompactAddr (Crypto era))
-  txOutCompactAddrL =
+  compactAddrTxOutL :: Lens' (TxOut era) (CompactAddr (Crypto era))
+  compactAddrTxOutL =
     lens
-      ( \txOut -> case txOut ^. txOutAddrEitherL of
+      ( \txOut -> case txOut ^. addrEitherTxOutL of
           Left addr -> compactAddr addr
           Right cAddr -> cAddr
       )
-      (\txOut cAddr -> txOut & txOutAddrEitherL .~ Right cAddr)
+      (\txOut cAddr -> txOut & addrEitherTxOutL .~ Right cAddr)
 
   -- | Lens for getting and setting in TxOut either an address or its compact
   -- version by doing the least amount of work.
@@ -210,7 +205,7 @@ class
   -- can define just this functionality. Also sometimes it crutial to know at
   -- the callsite which form of address we have readily available without any
   -- conversions (eg. searching millions of TxOuts for a particular address)
-  txOutAddrEitherL :: Lens' (TxOut era) (Either (Addr (Crypto era)) (CompactAddr (Crypto era)))
+  addrEitherTxOutL :: Lens' (TxOut era) (Either (Addr (Crypto era)) (CompactAddr (Crypto era)))
 
 -- | A value is something which quantifies a transaction output.
 type family Value era :: Type
@@ -229,11 +224,21 @@ class
   hashAuxiliaryData :: AuxiliaryData era -> AuxiliaryDataHash (Crypto era)
   validateAuxiliaryData :: ProtVer -> AuxiliaryData era -> Bool
 
--- | Protocol parameters
-type family PParams era = (r :: Type) | r -> era
+class
+  ( Era era,
+    Eq (PParams era),
+    Ord (PParamsUpdate era),
+    Show (PParams era)
+  ) =>
+  EraPParams era
+  where
+  -- | Protocol parameters
+  type PParams era = (r :: Type) | r -> era
 
--- | The type of updates to Protocol parameters
-type family PParamsDelta era = (r :: Type) | r -> era
+  -- | The type of updates to Protocol parameters
+  type PParamsUpdate era = (r :: Type) | r -> era
+
+  applyPPUpdates :: PParams era -> PParamsUpdate era -> PParams era
 
 -- | The set of witnesses in a Tx
 class Era era => EraWitnesses era where
@@ -248,13 +253,13 @@ class Era era => EraWitnesses era where
 --
 -- NOTE: 'Ord' is not included, as 'Ord' for a 'Block' or a 'NewEpochState'
 -- doesn't make sense.
-type ChainData t = (Eq t, Show t, NoThunks t, Typeable t)
+-- type ChainData t = (Eq t, Show t, NoThunks t, Typeable t)
 
--- | Constraints for serialising from/to CBOR
-type SerialisableData t = (FromCBOR t, ToCBOR t)
+-- -- | Constraints for serialising from/to CBOR
+-- type SerialisableData t = (FromCBOR t, ToCBOR t)
 
--- | Constraints for serialising from/to CBOR using 'Annotator'
-type AnnotatedData t = (FromCBOR (Annotator t), ToCBOR t)
+-- -- | Constraints for serialising from/to CBOR using 'Annotator'
+-- type AnnotatedData t = (FromCBOR (Annotator t), ToCBOR t)
 
 -- | Era STS map
 type family EraRule (k :: Symbol) era :: Type

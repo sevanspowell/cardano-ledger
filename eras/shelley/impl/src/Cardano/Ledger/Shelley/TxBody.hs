@@ -167,14 +167,14 @@ instance CC.Crypto crypto => EraTxOut (ShelleyEra crypto) where
 
   mkBasicTxOut = ShelleyTxOut
 
-  txOutAddrEitherL =
+  addrEitherTxOutL =
     lens
       (Right . txOutCompactAddr)
       ( \txOut -> \case
           Left addr -> txOut {txOutCompactAddr = compactAddr addr}
           Right cAddr -> txOut {txOutCompactAddr = cAddr}
       )
-  txOutValueEitherL =
+  valueEitherTxOutL =
     lens
       (Right . txOutCompactValue)
       ( \txOut -> \case
@@ -252,25 +252,25 @@ data TxBodyRaw era = TxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance
-  NoThunks (PParamsDelta (ShelleyEra crypto)) =>
+  NoThunks (Core.PParamsUpdate (ShelleyEra crypto)) =>
   NoThunks (TxBodyRaw (ShelleyEra crypto))
 
 deriving instance
-  (CC.Crypto crypto, NFData (PParamsDelta (ShelleyEra crypto))) =>
+  (CC.Crypto crypto, NFData (Core.PParamsUpdate (ShelleyEra crypto))) =>
   NFData (TxBodyRaw (ShelleyEra crypto))
 
 deriving instance
-  (CC.Crypto crypto, Eq (PParamsDelta (ShelleyEra crypto))) =>
+  (CC.Crypto crypto, Eq (Core.PParamsUpdate (ShelleyEra crypto))) =>
   Eq (TxBodyRaw (ShelleyEra crypto))
 
 deriving instance
   ( CC.Crypto crypto,
-    Show (PParamsDelta (ShelleyEra crypto))
+    Show (Core.PParamsUpdate (ShelleyEra crypto))
   ) =>
   Show (TxBodyRaw (ShelleyEra crypto))
 
 instance
-  (FromCBOR (PParamsDelta (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (FromCBOR (Core.PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
   FromCBOR (TxBodyRaw (ShelleyEra crypto))
   where
   fromCBOR =
@@ -283,10 +283,10 @@ instance
       )
 
 instance
-  ( ToCBOR (PParamsDelta (ShelleyEra crypto)),
+  ( ToCBOR (Core.PParamsUpdate (ShelleyEra crypto)),
     Typeable crypto,
     CC.Crypto crypto,
-    FromCBOR (PParamsDelta (ShelleyEra crypto))
+    FromCBOR (Core.PParamsUpdate (ShelleyEra crypto))
   ) =>
   FromCBOR (Annotator (TxBodyRaw (ShelleyEra crypto)))
   where
@@ -301,7 +301,7 @@ instance
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
 boxBody ::
-  (FromCBOR (PParamsDelta (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (FromCBOR (Core.PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
   Word ->
   Field (TxBodyRaw (ShelleyEra crypto))
 boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
@@ -318,7 +318,7 @@ boxBody n = invalidField n
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
 txSparse ::
-  (ToCBOR (PParamsDelta (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (ToCBOR (Core.PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
   TxBodyRaw (ShelleyEra crypto) ->
   Encode ('Closed 'Sparse) (TxBodyRaw (ShelleyEra crypto))
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
@@ -348,7 +348,7 @@ baseTxBodyRaw =
     }
 
 instance
-  (ToCBOR (PParamsDelta (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (ToCBOR (Core.PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
   ToCBOR (TxBodyRaw (ShelleyEra crypto))
   where
   toCBOR x = encode (txSparse x)
@@ -367,49 +367,49 @@ type TxBody era = ShelleyTxBody era
 instance CC.Crypto crypto => EraTxBody (ShelleyEra crypto) where
   type TxBody (ShelleyEra crypto) = ShelleyTxBody (ShelleyEra crypto)
 
-  txBodyInputsG = to (\(TxBodyConstr (Memo m _)) -> _inputsX m)
+  inputsTxBodyG = to (\(TxBodyConstr (Memo m _)) -> _inputsX m)
 
-  txBodyAllInputsG = txBodyInputsG
+  allInputsTxBodyG = inputsTxBodyG
 
-  txBodyOutputsG = to (\(TxBodyConstr (Memo m _)) -> _outputsX m)
+  outputsTxBodyG = to (\(TxBodyConstr (Memo m _)) -> _outputsX m)
 
-  txBodyTxFeeG = to (\(TxBodyConstr (Memo m _)) -> _txfeeX m)
+  txFeeTxBodyG = to (\(TxBodyConstr (Memo m _)) -> _txfeeX m)
 
-  txBodyMintedG = to (const Set.empty) -- TODO: fix this wart. Shelley does not know what minting is
+  mintedTxBodyG = to (const Set.empty) -- TODO: fix this wart. Shelley does not know what minting is
 
-  txBodyAdHashG = to (\(TxBodyConstr (Memo m _)) -> _mdHashX m)
+  adHashTxBodyG = to (\(TxBodyConstr (Memo m _)) -> _mdHashX m)
 
 class EraTxBody era => ShelleyEraTxBody era where
-  txBodyWdrlsG :: SimpleGetter (Core.TxBody era) (Wdrl (Crypto era))
+  wdrlsTxBodyG :: SimpleGetter (Core.TxBody era) (Wdrl (Crypto era))
 
-  txBodyTtlG :: SimpleGetter (Core.TxBody era) SlotNo
+  ttlTxBodyG :: SimpleGetter (Core.TxBody era) SlotNo
 
-  txBodyUpdateG :: SimpleGetter (Core.TxBody era) (StrictMaybe (Update era))
+  updateTxBodyG :: SimpleGetter (Core.TxBody era) (StrictMaybe (Update era))
 
-  txBodyCertsG :: SimpleGetter (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+  certsTxBodyG :: SimpleGetter (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
 
 instance CC.Crypto crypto => ShelleyEraTxBody (ShelleyEra crypto) where
-  txBodyWdrlsG = to (\(TxBodyConstr (Memo m _)) -> _wdrlsX m)
+  wdrlsTxBodyG = to (\(TxBodyConstr (Memo m _)) -> _wdrlsX m)
 
-  txBodyTtlG = to (\(TxBodyConstr (Memo m _)) -> _ttlX m)
+  ttlTxBodyG = to (\(TxBodyConstr (Memo m _)) -> _ttlX m)
 
-  txBodyUpdateG = to (\(TxBodyConstr (Memo m _)) -> _txUpdateX m)
+  updateTxBodyG = to (\(TxBodyConstr (Memo m _)) -> _txUpdateX m)
 
-  txBodyCertsG = to (\(TxBodyConstr (Memo m _)) -> _certsX m)
+  certsTxBodyG = to (\(TxBodyConstr (Memo m _)) -> _certsX m)
 
 deriving newtype instance
   ( Typeable crypto,
-    NoThunks (PParamsDelta (ShelleyEra crypto))
+    NoThunks (Core.PParamsUpdate (ShelleyEra crypto))
   ) =>
   NoThunks (TxBody (ShelleyEra crypto))
 
 deriving newtype instance
-  (CC.Crypto crypto, NFData (PParamsDelta (ShelleyEra crypto))) =>
+  (CC.Crypto crypto, NFData (Core.PParamsUpdate (ShelleyEra crypto))) =>
   NFData (TxBody (ShelleyEra crypto))
 
 deriving instance
   ( CC.Crypto crypto,
-    Show (PParamsDelta (ShelleyEra crypto))
+    Show (Core.PParamsUpdate (ShelleyEra crypto))
   ) =>
   Show (TxBody (ShelleyEra crypto))
 
@@ -420,14 +420,14 @@ deriving via
   instance
     ( Typeable crypto,
       CC.Crypto crypto,
-      FromCBOR (PParamsDelta (ShelleyEra crypto)),
-      ToCBOR (PParamsDelta (ShelleyEra crypto))
+      FromCBOR (Core.PParamsUpdate (ShelleyEra crypto)),
+      ToCBOR (Core.PParamsUpdate (ShelleyEra crypto))
     ) =>
     FromCBOR (Annotator (TxBody (ShelleyEra crypto)))
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
-  (ToCBOR (PParamsDelta (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (ToCBOR (Core.PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
   Set (TxIn (Crypto (ShelleyEra crypto))) ->
   StrictSeq (TxOut (ShelleyEra crypto)) ->
   StrictSeq (DCert (Crypto (ShelleyEra crypto))) ->

@@ -21,7 +21,6 @@ module Cardano.Ledger.Shelley
     AuxiliaryData,
     PParams,
     ShelleyPParams,
-    Core.PParamsDelta,
     Witnesses,
     nativeMultiSigTag,
     -- Deprecated
@@ -32,7 +31,6 @@ module Cardano.Ledger.Shelley
 where
 
 import Cardano.Ledger.Core hiding (PParams)
-import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as E (TranslationContext)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Shelley.BlockChain
@@ -40,13 +38,8 @@ import Cardano.Ledger.Shelley.BlockChain
     bbHash,
     txSeqTxns,
   )
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesPParams (..),
-    UsesTxBody,
-    UsesValue,
-  )
 import Cardano.Ledger.Shelley.Core (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (PParams, ShelleyPParams, updatePParams)
+import Cardano.Ledger.Shelley.PParams (PParams, ShelleyPParams)
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
     ShelleyTxBody,
@@ -56,18 +49,7 @@ import Cardano.Ledger.Shelley.Tx
 import qualified Cardano.Ledger.Shelley.Tx as Shelley (Tx, TxBody, TxOut)
 import qualified Data.ByteString as BS
 
-instance CryptoClass.Crypto c => UsesValue (ShelleyEra c)
-
-instance CryptoClass.Crypto c => UsesPParams (ShelleyEra c) where
-  mergePPUpdates _ = updatePParams
-
 type instance E.TranslationContext (ShelleyEra c) = ()
-
---------------------------------------------------------------------------------
--- Core instances
---------------------------------------------------------------------------------
-
-type instance Core.PParams (ShelleyEra c) = ShelleyPParams (ShelleyEra c)
 
 --------------------------------------------------------------------------------
 -- Ledger data instances
@@ -79,7 +61,7 @@ nativeMultiSigTag :: BS.ByteString
 nativeMultiSigTag = "\00"
 
 instance
-  (CryptoClass.Crypto c, UsesTxBody (ShelleyEra c)) =>
+  (CryptoClass.Crypto c) =>
   ValidateScript (ShelleyEra c)
   where
   scriptPrefixTag _script = nativeMultiSigTag

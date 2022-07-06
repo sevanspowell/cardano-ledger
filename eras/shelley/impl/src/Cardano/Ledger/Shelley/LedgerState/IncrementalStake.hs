@@ -107,8 +107,8 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
         Coin 0 -> Nothing
         final -> Just final
     accum ans@(IStake stake ptrs) out =
-      let c = Val.coin (out ^. txOutValueL)
-       in case out ^. txOutAddrL of
+      let c = Val.coin (out ^. valueTxOutL)
+       in case out ^. addrTxOutL of
             Addr _ _ (StakeRefPtr p) -> IStake stake (Map.alter (keepOrDelete c) p ptrs)
             Addr _ _ (StakeRefBase hk) -> IStake (Map.alter (keepOrDelete c) hk stake) ptrs
             _other -> ans

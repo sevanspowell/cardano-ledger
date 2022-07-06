@@ -18,12 +18,6 @@ import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, StrictMaybe
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesPParams (mergePPUpdates),
-    UsesScript,
-    UsesTxBody,
-    UsesValue,
-  )
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
     PPUPState (..),
@@ -50,7 +44,6 @@ import Control.State.Transition
 import Data.Default.Class (Default)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
@@ -66,11 +59,7 @@ newtype UpecPredicateFailure era
 instance NoThunks (UpecPredicateFailure era)
 
 instance
-  ( UsesAuxiliary era,
-    UsesTxBody era,
-    UsesScript era,
-    UsesValue era,
-    UsesPParams era,
+  ( Core.EraPParams era,
     Default (Core.PParams era),
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     HasField "_keyDeposit" (Core.PParams era) Coin,
@@ -79,7 +68,7 @@ instance
     HasField "_maxBHSize" (Core.PParams era) Natural,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_protocolVersion" (Core.PParamsDelta era) (StrictMaybe ProtVer)
+    HasField "_protocolVersion" (Core.PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   STS (UPEC era)
   where
@@ -119,7 +108,7 @@ instance
 -- values. Here @n@ is the quorum needed.
 votedValue ::
   forall era.
-  UsesPParams era =>
+  Core.EraPParams era =>
   ProposedPPUpdates era ->
   -- | Protocol parameters to which the change will be applied.
   Core.PParams era ->
@@ -131,7 +120,7 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
       votes =
         Map.foldr
           (\vote tally -> Map.insert vote (incrTally vote tally) tally)
-          (Map.empty :: Map (Core.PParamsDelta era) Int)
+          (Map.empty :: Map (Core.PParamsUpdate era) Int)
           pup
       consensus = Map.filter (>= quorumN) votes
    in case length consensus of
@@ -142,7 +131,7 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
         --   1) `consensus` is empty, or
         --   2) `consensus` has exactly one element.
         1 ->
-          (Just . mergePPUpdates (Proxy @era) pps . fst . head . Map.toList)
+          (Just . Core.applyPPUpdates pps . fst . head . Map.toList)
             consensus
         -- NOTE that `updatePParams` corresponds to the union override right
         -- operation in the formal spec.

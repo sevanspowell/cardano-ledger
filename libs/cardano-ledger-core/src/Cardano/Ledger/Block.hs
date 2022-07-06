@@ -182,7 +182,7 @@ neededTxInsForBlock ::
   Set (TxIn (Era.Crypto era))
 neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where
-    txBodies = map (^. txBodyG) $ toList $ Era.fromTxSeq txsSeq
+    txBodies = map (^. bodyTxG) $ toList $ Era.fromTxSeq txsSeq
     allTxIns = Set.unions $ map Era.getAllTxInputs txBodies
     newTxIds = Set.fromList $ map txid txBodies
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds

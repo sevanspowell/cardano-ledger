@@ -207,7 +207,7 @@ instance
     ScriptWitnessNotValidatingUTXOW ss ->
       encodeListLen 2 <> toCBOR (3 :: Word8)
         <> encodeFoldable ss
-    (UtxoFailure a) ->
+    UtxoFailure a ->
       encodeListLen 2 <> toCBOR (4 :: Word8)
         <> toCBOR a
     MIRInsufficientGenesisSigsUTXOW sigs ->
@@ -323,7 +323,7 @@ transitionRulesUTXOW = do
   runTestOnSignal $ validateFailedScripts tx
 
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  runTest $ validateMissingScripts pp (scriptsNeeded utxo tx) (Map.keysSet (tx ^. Core.txWitsG . Core.scriptWitsG))
+  runTest $ validateMissingScripts pp (scriptsNeeded utxo tx) (Map.keysSet (tx ^. Core.witsTxG . Core.scriptWitsG))
 
   -- check VKey witnesses
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
@@ -393,7 +393,7 @@ validateFailedScripts tx = do
           ( \hs validator ->
               hashScript @era validator /= hs || not (validateScript @era validator tx)
           )
-          (tx ^. Core.txWitsG . Core.scriptWitsG)
+          (tx ^. Core.witsTxG . Core.scriptWitsG)
   failureUnless (Map.null failedScripts) $
     ScriptWitnessNotValidatingUTXOW (Map.keysSet failedScripts)
 
@@ -435,19 +435,19 @@ validateVerifiedWits tx =
     [] -> pure ()
     nonEmpty -> failure $ InvalidWitnessesUTXOW nonEmpty
   where
-    txBody = tx ^. Core.txBodyG
+    txBody = tx ^. Core.bodyTxG
     txBodyHash = extractHash (hashAnnotated @(Crypto era) txBody)
     wvkKey (WitVKey k _) = k
     failed =
       wvkKey
         <$> filter
           (not . verifyWitVKey txBodyHash)
-          (Set.toList $ tx ^. Core.txWitsG . Core.addrWitsG)
+          (Set.toList $ tx ^. Core.witsTxG . Core.addrWitsG)
     failedBootstrap =
       bwKey
         <$> filter
           (not . verifyBootstrapWit txBodyHash)
-          (Set.toList $ tx ^. Core.txWitsG . Core.bootAddrWitsG)
+          (Set.toList $ tx ^. Core.witsTxG . Core.bootAddrWitsG)
 
 {-
 validateNeededWitnesses ::
@@ -504,14 +504,14 @@ witsVKeyNeeded utxo' tx genDelegs =
     `Set.union` wdrlAuthors
     `Set.union` updateKeys
   where
-    txBody = tx ^. Core.txBodyG
+    txBody = tx ^. Core.bodyTxG
     inputAuthors :: Set (KeyHash 'Witness (Crypto era))
-    inputAuthors = foldr accum Set.empty (txBody ^. Core.txBodyInputsG)
+    inputAuthors = foldr accum Set.empty (txBody ^. Core.inputsTxBodyG)
       where
         accum txin ans =
           case txinLookup txin utxo' of
             Just txOut ->
-              case txOut ^. Core.txOutAddrL of
+              case txOut ^. Core.addrTxOutL of
                 Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
                 AddrBootstrap bootAddr ->
                   Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
@@ -519,11 +519,11 @@ witsVKeyNeeded utxo' tx genDelegs =
             Nothing -> ans
 
     wdrlAuthors :: Set (KeyHash 'Witness (Crypto era))
-    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (txBody ^. txBodyWdrlsG))
+    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (txBody ^. wdrlsTxBodyG))
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
     owners :: Set (KeyHash 'Witness (Crypto era))
-    owners = foldr accum Set.empty (txBody ^. txBodyCertsG)
+    owners = foldr accum Set.empty (txBody ^. certsTxBodyG)
       where
         accum (DCertPool (RegPool pool)) ans =
           Set.union
@@ -538,7 +538,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     -- before the call to `cwitness`, so this error should never be reached.
 
     certAuthors :: Set (KeyHash 'Witness (Crypto era))
-    certAuthors = foldr accum Set.empty (txBody ^. txBodyCertsG)
+    certAuthors = foldr accum Set.empty (txBody ^. certsTxBodyG)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
@@ -546,7 +546,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     updateKeys =
       asWitness
         `Set.map` propWits
-          (strictMaybeToMaybe $ txBody ^. txBodyUpdateG)
+          (strictMaybeToMaybe $ txBody ^. updateTxBodyG)
           genDelegs
 
 -- | check metadata hash
@@ -560,9 +560,9 @@ validateMetadata ::
   Core.Tx era ->
   Test (UtxowPredicateFailure era)
 validateMetadata pp tx =
-  let txBody = tx ^. Core.txBodyG
+  let txBody = tx ^. Core.bodyTxG
       pv = getField @"_protocolVersion" pp
-   in case (txBody ^. Core.txBodyAdHashG, tx ^. Core.txAuxiliaryDataG) of
+   in case (txBody ^. Core.adHashTxBodyG, tx ^. Core.auxiliaryDataTxG) of
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failure $ MissingTxMetadata mdh
         (SNothing, SJust md') ->
@@ -594,12 +594,12 @@ validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKey
         Set.fromList $ asWitness . genDelegKeyHash <$> Map.elems genMapping
       khAsSet = witsKeyHashes
       genSig = eval (genDelegates ∩ khAsSet)
-      txBody = tx ^. Core.txBodyG
+      txBody = tx ^. Core.bodyTxG
       mirCerts =
         StrictSeq.forceToStrict
           . Seq.filter isInstantaneousRewards
           . StrictSeq.fromStrict
-          $ txBody ^. txBodyCertsG
+          $ txBody ^. certsTxBodyG
    in failureUnless
         (not (null mirCerts) ==> Set.size genSig >= fromIntegral coreNodeQuorum)
         $ MIRInsufficientGenesisSigsUTXOW genSig
