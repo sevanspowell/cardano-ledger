@@ -72,7 +72,6 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( maybeToStrictMaybe,
   )
@@ -82,13 +81,12 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.HKD (HKD)
-import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness, bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era
-import Cardano.Ledger.Shelley.Metadata (Metadata (Metadata), validMetadatum)
+import Cardano.Ledger.Shelley.Metadata ()
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..), TxBody, TxOut)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -103,7 +101,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Maybe.Strict (StrictMaybe, strictMaybeToMaybe)
 import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
-import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -595,12 +592,3 @@ witsFromTxWitnesses ::
 witsFromTxWitnesses tx =
   Set.map witVKeyHash (tx ^. witsTxG . addrWitsG)
     `Set.union` Set.map bootstrapWitKeyHash (tx ^. witsTxG . bootAddrWitsG)
-
-instance CC.Crypto crypto => EraAuxiliaryData (ShelleyEra crypto) where
-  type AuxiliaryData (ShelleyEra crypto) = Metadata (ShelleyEra crypto)
-
-  validateAuxiliaryData _ (Metadata m) = all validMetadatum m
-  hashAuxiliaryData metadata =
-    AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @crypto) index metadata)
-    where
-      index = Proxy @EraIndependentAuxiliaryData
