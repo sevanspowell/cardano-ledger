@@ -90,7 +90,6 @@ import Cardano.Ledger.Serialization
     mapFromCBOR,
     mapToCBOR,
   )
-import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( DCert (..),
     DelegCert (..),
@@ -101,6 +100,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     MIRTarget (..),
     PoolCert (..),
   )
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.PoolParams
 import Cardano.Ledger.Slot (SlotNo (..))
@@ -198,13 +198,10 @@ instance (Era era, HeapWords (CompactForm (Value era))) => HeapWords (TxOut era)
 packedADDRHASH :: forall proxy era. (CC.Crypto (Crypto era)) => proxy era -> ShortByteString
 packedADDRHASH _ = pack (replicate (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (CC.ADDRHASH (Crypto era))))) (1 :: Word8))
 
-instance
-  (EraTxOut era) =>
-  Show (TxOut era)
-  where
+instance EraTxOut era => Show (TxOut era) where
   show = show . viewCompactTxOut -- FIXME: showing TxOut as a tuple is just sad
 
-deriving instance Eq (TxOut (ShelleyEra crypto))
+deriving instance Eq (CompactForm (Value era)) => Eq (TxOut era)
 
 instance NFData (TxOut era) where
   rnf = (`seq` ())
