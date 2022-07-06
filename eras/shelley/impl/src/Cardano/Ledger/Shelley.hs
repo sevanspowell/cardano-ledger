@@ -38,7 +38,7 @@ import Cardano.Ledger.Shelley.BlockChain
     bbHash,
     txSeqTxns,
   )
-import Cardano.Ledger.Shelley.Core (ShelleyEra)
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (PParams, ShelleyPParams)
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,

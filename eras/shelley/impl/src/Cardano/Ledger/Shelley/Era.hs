@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Ledger.Shelley.Core (ShelleyEra) where
+module Cardano.Ledger.Shelley.Era (ShelleyEra) where
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (Era (..), Script, Value)

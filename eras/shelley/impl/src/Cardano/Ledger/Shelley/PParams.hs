@@ -55,7 +55,7 @@ import Cardano.Ledger.Core hiding (PParams, PParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
-import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),

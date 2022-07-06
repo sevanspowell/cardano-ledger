@@ -90,7 +90,7 @@ import Cardano.Ledger.Serialization
     mapFromCBOR,
     mapToCBOR,
   )
-import Cardano.Ledger.Shelley.Core (ShelleyEra)
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( DCert (..),
     DelegCert (..),

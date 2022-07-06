@@ -87,7 +87,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness, bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Metadata (Metadata (Metadata), validMetadatum)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..), TxBody, TxOut)
