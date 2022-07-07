@@ -58,6 +58,10 @@ module Cardano.Ledger.Shelley.TxBody
     --
     SizeOfPoolOwners (..),
     SizeOfPoolRelays (..),
+
+    -- * Helpers
+    addrEitherShelleyTxOutL,
+    valueEitherShelleyTxOutL,
   )
 where
 
@@ -166,25 +170,33 @@ instance CC.Crypto crypto => EraTxOut (ShelleyEra crypto) where
   type TxOut (ShelleyEra crypto) = ShelleyTxOut (ShelleyEra crypto)
 
   mkBasicTxOut = ShelleyTxOut
+  addrEitherTxOutL = addrEitherShelleyTxOutL
+  valueEitherTxOutL = valueEitherShelleyTxOutL
 
-  addrEitherTxOutL =
-    lens
-      (Right . txOutCompactAddr)
-      ( \txOut -> \case
-          Left addr -> txOut {txOutCompactAddr = compactAddr addr}
-          Right cAddr -> txOut {txOutCompactAddr = cAddr}
-      )
-  valueEitherTxOutL =
-    lens
-      (Right . txOutCompactValue)
-      ( \txOut -> \case
-          Left value ->
-            txOut
-              { txOutCompactValue =
-                  fromMaybe (error $ "Illegal value in TxOut: " <> show value) $ toCompact value
-              }
-          Right cValue -> txOut {txOutCompactValue = cValue}
-      )
+addrEitherShelleyTxOutL ::
+  Lens' (ShelleyTxOut era) (Either (Addr (Crypto era)) (CompactAddr (Crypto era)))
+addrEitherShelleyTxOutL =
+  lens
+    (Right . txOutCompactAddr)
+    ( \txOut -> \case
+        Left addr -> txOut {txOutCompactAddr = compactAddr addr}
+        Right cAddr -> txOut {txOutCompactAddr = cAddr}
+    )
+
+valueEitherShelleyTxOutL ::
+  (Show (Value era), Compactible (Value era)) =>
+  Lens' (ShelleyTxOut era) (Either (Value era) (CompactForm (Value era)))
+valueEitherShelleyTxOutL =
+  lens
+    (Right . txOutCompactValue)
+    ( \txOut -> \case
+        Left value ->
+          txOut
+            { txOutCompactValue =
+                fromMaybe (error $ "Illegal value in TxOut: " <> show value) $ toCompact value
+            }
+        Right cValue -> txOut {txOutCompactValue = cValue}
+    )
 
 -- assume Shelley+ type address : payment addr, staking addr (same length as payment), plus 1 word overhead
 instance (Era era, HeapWords (CompactForm (Value era))) => HeapWords (TxOut era) where
@@ -248,28 +260,15 @@ data TxBodyRaw era = TxBodyRaw
   }
   deriving (Generic, Typeable)
 
-deriving instance
-  NoThunks (PParamsUpdate (ShelleyEra crypto)) =>
-  NoThunks (TxBodyRaw (ShelleyEra crypto))
+deriving instance NoThunks (PParamsUpdate era) => NoThunks (TxBodyRaw era)
 
-deriving instance
-  (CC.Crypto crypto, NFData (PParamsUpdate (ShelleyEra crypto))) =>
-  NFData (TxBodyRaw (ShelleyEra crypto))
+deriving instance (EraTxBody era, NFData (PParamsUpdate era)) => NFData (TxBodyRaw era)
 
-deriving instance
-  (CC.Crypto crypto, Eq (PParamsUpdate (ShelleyEra crypto))) =>
-  Eq (TxBodyRaw (ShelleyEra crypto))
+deriving instance (EraTxBody era, Eq (PParamsUpdate era)) => Eq (TxBodyRaw era)
 
-deriving instance
-  ( CC.Crypto crypto,
-    Show (PParamsUpdate (ShelleyEra crypto))
-  ) =>
-  Show (TxBodyRaw (ShelleyEra crypto))
+deriving instance (EraTxBody era, Show (PParamsUpdate era)) => Show (TxBodyRaw era)
 
-instance
-  (FromCBOR (PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
-  FromCBOR (TxBodyRaw (ShelleyEra crypto))
-  where
+instance (EraTxBody era, FromCBOR (PParamsUpdate era)) => FromCBOR (TxBodyRaw era) where
   fromCBOR =
     decode
       ( SparseKeyed
@@ -280,12 +279,8 @@ instance
       )
 
 instance
-  ( ToCBOR (PParamsUpdate (ShelleyEra crypto)),
-    Typeable crypto,
-    CC.Crypto crypto,
-    FromCBOR (PParamsUpdate (ShelleyEra crypto))
-  ) =>
-  FromCBOR (Annotator (TxBodyRaw (ShelleyEra crypto)))
+  (EraTxBody era, FromCBOR (PParamsUpdate era)) =>
+  FromCBOR (Annotator (TxBodyRaw era))
   where
   fromCBOR = pure <$> fromCBOR
 
@@ -298,9 +293,9 @@ instance
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
 boxBody ::
-  (FromCBOR (PParamsUpdate (ShelleyEra crypto)), CC.Crypto crypto) =>
+  (EraTxBody era, FromCBOR (PParamsUpdate era)) =>
   Word ->
-  Field (TxBodyRaw (ShelleyEra crypto))
+  Field (TxBodyRaw era)
 boxBody 0 = field (\x tx -> tx {_inputsX = x}) (D (decodeSet fromCBOR))
 boxBody 1 = field (\x tx -> tx {_outputsX = x}) (D (decodeStrictSeq fromCBOR))
 boxBody 4 = field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
@@ -331,7 +326,7 @@ txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
 
 -- The initial TxBody. We will overide some of these fields as we build a TxBody,
 -- adding one field at a time, using optional serialisers, inside the Pattern.
-baseTxBodyRaw :: TxBodyRaw (ShelleyEra crypto)
+baseTxBodyRaw :: TxBodyRaw era
 baseTxBodyRaw =
   TxBodyRaw
     { _inputsX = Set.empty,
@@ -395,32 +390,21 @@ instance CC.Crypto crypto => ShelleyEraTxBody (ShelleyEra crypto) where
   certsTxBodyG = to (\(TxBodyConstr (Memo m _)) -> _certsX m)
 
 deriving newtype instance
-  ( Typeable crypto,
-    NoThunks (PParamsUpdate (ShelleyEra crypto))
-  ) =>
-  NoThunks (TxBody (ShelleyEra crypto))
+  (Era era, NoThunks (PParamsUpdate era)) => NoThunks (TxBody era)
 
 deriving newtype instance
-  (CC.Crypto crypto, NFData (PParamsUpdate (ShelleyEra crypto))) =>
-  NFData (TxBody (ShelleyEra crypto))
+  (EraTxBody era, NFData (PParamsUpdate era)) => NFData (TxBody era)
 
 deriving instance
-  ( CC.Crypto crypto,
-    Show (PParamsUpdate (ShelleyEra crypto))
-  ) =>
-  Show (TxBody (ShelleyEra crypto))
+  (EraTxBody era, Show (PParamsUpdate era)) => Show (TxBody era)
 
-deriving instance Eq (TxBody (ShelleyEra crypto))
+deriving instance Eq (TxBody era)
 
 deriving via
-  (Mem (TxBodyRaw (ShelleyEra crypto)))
+  Mem (TxBodyRaw era)
   instance
-    ( Typeable crypto,
-      CC.Crypto crypto,
-      FromCBOR (PParamsUpdate (ShelleyEra crypto)),
-      ToCBOR (PParamsUpdate (ShelleyEra crypto))
-    ) =>
-    FromCBOR (Annotator (TxBody (ShelleyEra crypto)))
+    (EraTxBody era, FromCBOR (PParamsUpdate era)) =>
+    FromCBOR (Annotator (TxBody era))
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
@@ -457,20 +441,22 @@ pattern ShelleyTxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdat
 
 -- =========================================
 
-instance HashAnnotated (TxBody (ShelleyEra crypto)) EraIndependentTxBody crypto
+instance
+  (EraTxBody era, crypto ~ Crypto era) =>
+  HashAnnotated (TxBody era) EraIndependentTxBody crypto
 
-instance CC.Crypto crypto => ToCBOR (TxBody (ShelleyEra crypto)) where
+instance EraTxBody era => ToCBOR (TxBody era) where
   toCBOR (TxBodyConstr memo) = toCBOR memo
 
 -- ===============================================================
 
-instance CC.Crypto crypto => ToCBOR (TxOut (ShelleyEra crypto)) where
+instance EraTxOut era => ToCBOR (TxOut era) where
   toCBOR (TxOutCompact addr coin) =
     encodeListLen 2
       <> toCBOR addr
       <> toCBOR coin
 
-instance CC.Crypto crypto => FromCBOR (TxOut (ShelleyEra crypto)) where
+instance EraTxOut era => FromCBOR (TxOut era) where
   fromCBOR = fromNotSharedCBOR
 
 -- This instance does not do any sharing and is isomorphic to FromCBOR
