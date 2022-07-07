@@ -10,10 +10,16 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.ShelleyMA.Rules.Utxo where
+module Cardano.Ledger.ShelleyMA.Rules.Utxo
+  ( UTXO,
+    UtxoPredicateFailure (..),
+    consumed,
+    scaledMinDeposit,
+  )
+where
 
-import Lens.Micro
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
@@ -34,14 +40,15 @@ import Cardano.Ledger.Rules.ValidationMode
   )
 import Cardano.Ledger.Shelley.LedgerState (PPUPState)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams, PParams' (..), Update)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), ShelleyPParams, Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyTxOut, TxIn)
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), totalDeposits, txouts, txup)
+import Cardano.Ledger.ShelleyMA.Era (UTXO)
 import Cardano.Ledger.ShelleyMA.Timelocks
-import Cardano.Ledger.ShelleyMA.TxBody (MATxBody, ShelleyMAEraTxBody(..))
+import Cardano.Ledger.ShelleyMA.TxBody (MATxBody, ShelleyMAEraTxBody (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Monad.Trans.Reader (asks)
@@ -62,6 +69,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
+import Lens.Micro
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import Validation
@@ -355,8 +363,6 @@ validateValueNotConservedUTxO pp utxo stakepools txb =
 --------------------------------------------------------------------------------
 -- UTXO STS
 --------------------------------------------------------------------------------
-data UTXO era
-
 instance
   forall era.
   ( EraTx era,

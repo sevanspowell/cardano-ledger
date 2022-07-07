@@ -32,7 +32,7 @@ module Cardano.Ledger.ShelleyMA.TxBody
         wdrls'
       ),
     TxBody,
-    ShelleyMAEraTxBody(..),
+    ShelleyMAEraTxBody (..),
     TxBodyRaw (..),
     txSparse,
     bodyFields,
@@ -44,27 +44,21 @@ module Cardano.Ledger.ShelleyMA.TxBody
   )
 where
 
-import Data.Proxy
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TxBody)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Serialization (encodeFoldable)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Tx (ShelleyWitnesses, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     ShelleyEraTxBody (..),
     ShelleyTxOut (..),
     Wdrl (..),
-    addrEitherShelleyTxOutL,
-    valueEitherShelleyTxOutL,
   )
 import Cardano.Ledger.ShelleyMA.Era
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, ValidityInterval (..), evalTimelock)
@@ -92,6 +86,7 @@ import Data.Coders
   )
 import qualified Data.Map.Strict as Map
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
+import Data.Proxy
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set, empty)
 import qualified Data.Set as Set
@@ -307,27 +302,6 @@ pattern TxBody' {inputs', outputs', certs', wdrls', txfee', vldt', update', adHa
 {-# COMPLETE TxBody' #-}
 
 instance
-  ( CC.Crypto crypto,
-    MAClass ma crypto
-  ) =>
-  EraTxOut (ShelleyMAEra ma crypto)
-  where
-  type TxOut (ShelleyMAEra ma crypto) = ShelleyTxOut (ShelleyMAEra ma crypto)
-
-  mkBasicTxOut = ShelleyTxOut
-  addrEitherTxOutL = addrEitherShelleyTxOutL
-  valueEitherTxOutL = valueEitherShelleyTxOutL
-
-instance (CC.Crypto crypto, MAClass ma crypto) => EraWitnesses (ShelleyMAEra ma crypto) where
-  type Witnesses (ShelleyMAEra ma crypto) = ShelleyWitnesses (ShelleyMAEra ma crypto)
-
-  scriptWitsG = to scriptWits
-
-  addrWitsG = to addrWits'
-
-  bootAddrWitsG = to bootWits
-
-instance
   ( MAClass ma crypto,
     FromCBOR (PParamsUpdate (ShelleyMAEra ma crypto)),
     DecodeMint (MAValue ma crypto),
@@ -382,33 +356,9 @@ instance
 
   mintTxBodyG = to (\(TxBodyConstr (Memo m _)) -> mint m)
 
--- ==================================================================
--- Promote the fields of TxBodyRaw to be fields of TxBody. Either
--- automatically or by hand. Both methods have drawbacks.
-
-{-
-instance HasField tag (TxBodyRaw e) c => HasField (tag::Symbol) (TxBody e) c where
-   getField (TxBodyConstr (Memo x _)) = getField @tag x
-
--- The method above autmatically lifts the Hasfield instances from TxBodyRaw to TxBody
--- the problem is, if some other file imports this file, it needs to import both
--- the hidden type TxBodyRaw and its constructors like this
--- import Cardano.Ledger.ShelleyMA.TxBody(TxBodyRaw(..))     OR
--- import qualified Cardano.Ledger.ShelleyMA.TxBody as XXX
--- Both are very ugly, but at least in the second way, one doesn't need to know the name of TxBodyRaw
--- So instead we tediously write by hand explicit HasField instances for TxBody
--}
-
--- ========================================
--- WellFormed era (and a few other) instances
-{-
-
-instance Value era ~ value => HasField "mint" (TxBody era) value where
-  getField (TxBodyConstr (Memo m _)) = getField @"mint" m
--}
 -- =======================================================
 -- Validating timelock scripts
--- We Assume that TxBody has field "vldt" that extracts a ValidityInterval
+-- We extract ValidityInterval from TxBody with vldtTxBodyG getter
 -- We still need to correctly compute the witness set for TxBody as well.
 
 validateTimelock ::

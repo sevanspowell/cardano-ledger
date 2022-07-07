@@ -16,12 +16,18 @@
 
 module Cardano.Ledger.ShelleyMA.AuxiliaryData
   ( MAAuxiliaryData (MAAuxiliaryData, AuxiliaryData', ..),
+    AuxiliaryData,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Core
+  ( Era (..),
+    EraAuxiliaryData (hashAuxiliaryData, validateAuxiliaryData),
+    Script,
+  )
+import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
@@ -41,12 +47,12 @@ import Codec.CBOR.Decoding
 import Control.DeepSeq
 import Data.Coders
 import Data.Map.Strict (Map)
-import Data.MemoBytes
+import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import NoThunks.Class
+import NoThunks.Class (NoThunks)
 
 -- =======================================
 
@@ -105,6 +111,10 @@ pattern MAAuxiliaryData blob sp <-
           (encAuxiliaryDataRaw $ AuxiliaryDataRaw blob sp)
 
 {-# COMPLETE MAAuxiliaryData #-}
+
+type AuxiliaryData = MAAuxiliaryData
+
+{-# DEPRECATED AuxiliaryData "Use `MAAuxiliaryData` instead" #-}
 
 pattern AuxiliaryData' ::
   Map Word64 Metadatum ->
