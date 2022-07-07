@@ -20,7 +20,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Tx
-  ( -- transaction
+  ( -- * Transaction
     Tx,
     ShelleyTx
       ( ShelleyTx,
@@ -28,15 +28,13 @@ module Cardano.Ledger.Shelley.Tx
         wits,
         auxiliaryData
       ),
-    TxBody,
-    ShelleyTxBody (..),
-    TxOut,
-    ShelleyTxOut (..),
-    TxIn (..),
-    TxId (..),
+    bodyShelleyTxL,
+    witsShelleyTxL,
+    auxiliaryDataShelleyTxL,
+    sizeShelleyTxG,
     decodeWits,
     segwitTx,
-    -- witness data
+    -- * Witnesses
     ShelleyWitnesses,
     WitnessSet,
     WitnessSetHKD
@@ -46,8 +44,6 @@ module Cardano.Ledger.Shelley.Tx
         scriptWits,
         txWitsBytes
       ),
-    WitVKey (..),
-    ValidateScript (..), -- reexported from Cardano.Ledger.Era
     txwitsScript,
     extractKeyHashWitnessSet,
     addrWits',
@@ -58,6 +54,15 @@ module Cardano.Ledger.Shelley.Tx
     prettyWitnessSetParts,
     minfee,
     witsFromTxWitnesses,
+    -- * Re-exports
+    TxBody,
+    ShelleyTxBody (..),
+    TxOut,
+    ShelleyTxOut (..),
+    TxIn (..),
+    TxId (..),
+    WitVKey (..),
+    ValidateScript (..),
   )
 where
 
@@ -109,7 +114,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records
-import Lens.Micro (to, (^.))
+import Lens.Micro hiding (ix)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -160,16 +165,61 @@ type Tx era = ShelleyTx era
 
 {-# DEPRECATED Tx "Use `ShelleyTx` instead" #-}
 
+-- | `Core.TxBody` setter and getter for `ShelleyTx`. The setter will update
+-- memoized binary representation.
+bodyShelleyTxL ::
+  ( ToCBOR (AuxiliaryData era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Witnesses era)
+  ) =>
+  Lens' (ShelleyTx era) (Core.TxBody era)
+bodyShelleyTxL =
+  lens
+    (\(TxConstr (Memo tx _)) -> _body tx)
+    (\(TxConstr (Memo tx _)) txBody -> TxConstr $ memoBytes $ encodeTxRaw $ tx {_body = txBody})
+
+-- | `Witnesses` setter and getter for `ShelleyTx`. The setter will update
+-- memoized binary representation.
+witsShelleyTxL ::
+  ( ToCBOR (AuxiliaryData era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Witnesses era)
+  ) =>
+  Lens' (ShelleyTx era) (Witnesses era)
+witsShelleyTxL =
+  lens
+    (\(TxConstr (Memo tx _)) -> _wits tx)
+    (\(TxConstr (Memo tx _)) txWits -> TxConstr $ memoBytes $ encodeTxRaw $ tx {_wits = txWits})
+
+-- | `AuxiliaryData` setter and getter for `ShelleyTx`. The setter will update
+-- memoized binary representation.
+auxiliaryDataShelleyTxL ::
+  ( ToCBOR (AuxiliaryData era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Witnesses era)
+  ) =>
+  Lens' (ShelleyTx era) (StrictMaybe (AuxiliaryData era))
+auxiliaryDataShelleyTxL =
+  lens
+    (\(TxConstr (Memo tx _)) -> _auxiliaryData tx)
+    ( \(TxConstr (Memo tx _)) auxData ->
+        TxConstr $ memoBytes $ encodeTxRaw $ tx {_auxiliaryData = auxData}
+    )
+
+-- | Size getter for `ShelleyTx`.
+sizeShelleyTxG :: SimpleGetter (Tx era) Integer
+sizeShelleyTxG = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
+
 instance CC.Crypto crypto => EraTx (ShelleyEra crypto) where
   type Tx (ShelleyEra crypto) = ShelleyTx (ShelleyEra crypto)
 
-  bodyTxG = to (\(TxConstr (Memo tx _)) -> _body tx)
+  bodyTxG = bodyShelleyTxL
 
-  witsTxG = to (\(TxConstr (Memo tx _)) -> _wits tx)
+  witsTxG = witsShelleyTxL
 
-  auxiliaryDataTxG = to (\(TxConstr (Memo tx _)) -> _auxiliaryData tx)
+  auxiliaryDataTxG = auxiliaryDataShelleyTxL
 
-  sizeTxG = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
+  sizeTxG = sizeShelleyTxG
 
 deriving newtype instance
   ( NFData (Core.TxBody (ShelleyEra crypto)),
@@ -222,28 +272,6 @@ pattern ShelleyTx {body, wits, auxiliaryData} <-
 
 {-# COMPLETE ShelleyTx #-}
 
---------------------------------------------------------------------------------
--- Field accessors
---------------------------------------------------------------------------------
-{-
-instance
-  aux ~ Core.AuxiliaryData era =>
-  HasField "auxiliaryData" (Tx era) (StrictMaybe aux)
-  where
-  getField (TxConstr (Memo (TxRaw _ _ a) _)) = a
-
-instance (body ~ Core.TxBody era) => HasField "body" (Tx era) body where
-  getField (TxConstr (Memo (TxRaw b _ _) _)) = b
-
-instance
-  (wits ~ Core.Witnesses era) =>
-  HasField "wits" (Tx era) wits
-  where
-  getField (TxConstr (Memo (TxRaw _ w _) _)) = w
-
-instance HasField "txsize" (Tx era) Integer where
-  getField (TxConstr (Memo _ bytes)) = fromIntegral $ SBS.length bytes
--}
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
