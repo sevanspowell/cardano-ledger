@@ -139,8 +139,10 @@ class
 class
   ( DecodeNonNegative (Value era),
     Compactible (Value era),
+    NFData (Value era),
     Show (Value era),
     Val (Value era),
+    Eq (Value era),
     FromCBOR (Value era),
     ToCBOR (Value era),
     FromCBOR (TxOut era),

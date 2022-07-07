@@ -37,6 +37,7 @@ module Cardano.Ledger.Shelley.Tx
     decodeWits,
     segwitTx,
     -- witness data
+    ShelleyWitnesses,
     WitnessSet,
     WitnessSetHKD
       ( WitnessSet,
