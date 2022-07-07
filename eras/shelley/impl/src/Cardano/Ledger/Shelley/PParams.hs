@@ -13,9 +13,8 @@
 
 -- | This module contains just the type of protocol parameters.
 module Cardano.Ledger.Shelley.PParams
-  ( PParams' (..),
-    PParams,
-    ShelleyPParams,
+  ( ShelleyPParams,
+    ShelleyPParamsHKD (..),
     PPUPState (..),
     emptyPParams,
     HKD,
@@ -23,12 +22,16 @@ module Cardano.Ledger.Shelley.PParams
     PPUpdateEnv (..),
     ProposedPPUpdates (..),
     emptyPPPUpdates,
-    PParamsUpdate,
     ShelleyPParamsUpdate,
     emptyPParamsUpdate,
     Update (..),
     updatePParams,
     pvCanFollow,
+
+    -- * Deprecated
+    PParams,
+    PParams',
+    PParamsUpdate,
   )
 where
 
@@ -51,12 +54,11 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Core hiding (PParams, PParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
-import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
@@ -65,6 +67,7 @@ import Cardano.Ledger.Serialization
     mapFromCBOR,
     mapToCBOR,
   )
+import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Orphans ()
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Control.DeepSeq (NFData)
@@ -93,10 +96,13 @@ type PParams era = ShelleyPParams era
 
 {-# DEPRECATED PParams "Use `ShelleyPParams` instead" #-}
 
-type PParamsUpdate era = PParams' StrictMaybe era
+type PParams' f era = ShelleyPParamsHKD f era
+
+{-# DEPRECATED PParams' "Use `ShelleyPParamsHKD` instead" #-}
+
+type PParamsUpdate era = ShelleyPParamsUpdate era
 
 {-# DEPRECATED PParamsUpdate "Use `ShelleyPParamsUpdate` instead" #-}
-
 
 -- | Protocol parameters.
 --
@@ -122,7 +128,7 @@ type PParamsUpdate era = PParams' StrictMaybe era
 --         ...
 --       }
 -- @
-data PParams' f era = PParams
+data ShelleyPParamsHKD f era = ShelleyPParams
   { -- | The linear factor for the minimum fee calculation
     _minfeeA :: !(HKD f Natural),
     -- | The constant factor for the minimum fee calculation
@@ -160,10 +166,9 @@ data PParams' f era = PParams
   }
   deriving (Generic)
 
-type ShelleyPParams era = PParams' Identity era
+type ShelleyPParams era = ShelleyPParamsHKD Identity era
 
-type ShelleyPParamsUpdate era = PParams' StrictMaybe era
-
+type ShelleyPParamsUpdate era = ShelleyPParamsHKD StrictMaybe era
 
 instance CC.Crypto crypto => EraPParams (ShelleyEra crypto) where
   type PParams (ShelleyEra crypto) = ShelleyPParams (ShelleyEra crypto)
@@ -181,7 +186,7 @@ instance NoThunks (ShelleyPParams era)
 
 instance (Era era) => ToCBOR (ShelleyPParams era) where
   toCBOR
-    PParams
+    ShelleyPParams
       { _minfeeA = minfeeA',
         _minfeeB = minfeeB',
         _maxBBSize = maxBBSize',
@@ -221,8 +226,8 @@ instance (Era era) => ToCBOR (ShelleyPParams era) where
 
 instance (Era era) => FromCBOR (ShelleyPParams era) where
   fromCBOR = do
-    decodeRecordNamed "PParams" (const 18) $
-      PParams
+    decodeRecordNamed "ShelleyPParams" (const 18) $
+      ShelleyPParams
         <$> fromCBOR -- _minfeeA         :: Integer
         <*> fromCBOR -- _minfeeB         :: Natural
         <*> fromCBOR -- _maxBBSize       :: Natural
@@ -265,8 +270,8 @@ instance ToJSON (ShelleyPParams era) where
 
 instance FromJSON (ShelleyPParams era) where
   parseJSON =
-    Aeson.withObject "PParams" $ \obj ->
-      PParams
+    Aeson.withObject "ShelleyPParams" $ \obj ->
+      ShelleyPParams
         <$> obj .: "minFeeA"
         <*> obj .: "minFeeB"
         <*> obj .: "maxBlockBodySize"
@@ -291,7 +296,7 @@ instance Default (ShelleyPParams era) where
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: ShelleyPParams era
 emptyPParams =
-  PParams
+  ShelleyPParams
     { _minfeeA = 0,
       _minfeeB = 0,
       _maxBBSize = 0,
@@ -379,7 +384,7 @@ instance (Era era) => ToCBOR (PParamsUpdate era) where
 
 emptyPParamsUpdate :: PParamsUpdate era
 emptyPParamsUpdate =
-  PParams
+  ShelleyPParams
     { _minfeeA = SNothing,
       _minfeeB = SNothing,
       _maxBBSize = SNothing,
@@ -458,7 +463,7 @@ emptyPPPUpdates = ProposedPPUpdates Map.empty
 
 updatePParams :: PParams era -> PParamsUpdate era -> PParams era
 updatePParams pp ppup =
-  PParams
+  ShelleyPParams
     { _minfeeA = fromSMaybe (_minfeeA pp) (_minfeeA ppup),
       _minfeeB = fromSMaybe (_minfeeB pp) (_minfeeB ppup),
       _maxBBSize = fromSMaybe (_maxBBSize pp) (_maxBBSize ppup),

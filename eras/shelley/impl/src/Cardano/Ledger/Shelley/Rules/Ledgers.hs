@@ -23,7 +23,6 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState (AccountState, LedgerState)
 import Cardano.Ledger.Shelley.Rules.Ledger

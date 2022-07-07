@@ -43,12 +43,15 @@ import Cardano.Ledger.Core
     PreviousEra,
     TranslateEra (..),
     TranslationContext,
+    EraIndependentTxBody,
   )
+import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Validation (ShelleyEraCrypto)
+import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, LedgerPredicateFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 import Cardano.Ledger.Slot (SlotNo)
@@ -163,7 +166,11 @@ class
           . left ApplyTxError
           $ res
 
-instance ShelleyEraCrypto c => ApplyTx (ShelleyEra c)
+instance
+  ( CC.Crypto crypto,
+    DSignable crypto (Hash crypto EraIndependentTxBody)
+  ) =>
+  ApplyTx (ShelleyEra crypto)
 
 type MempoolEnv era = Ledger.LedgerEnv era
 

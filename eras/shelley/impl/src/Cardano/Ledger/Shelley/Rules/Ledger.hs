@@ -50,7 +50,7 @@ import Cardano.Ledger.Shelley.Rules.Delegs
   )
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UTXOW, UtxowPredicateFailure)
-import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody, ShelleyEraTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyEraTxBody (..))
 import Cardano.Ledger.Slot (SlotNo)
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition

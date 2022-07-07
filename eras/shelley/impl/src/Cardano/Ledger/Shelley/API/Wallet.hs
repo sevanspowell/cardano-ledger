@@ -94,7 +94,7 @@ import Cardano.Ledger.Shelley.LedgerState
     minfee,
     produced,
   )
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank
   ( NonMyopic (..),
     PerformanceEstimate (..),

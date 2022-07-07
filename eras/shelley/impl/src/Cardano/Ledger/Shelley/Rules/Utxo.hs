@@ -62,8 +62,8 @@ import Cardano.Ledger.Shelley.LedgerState.Types
   )
 import Cardano.Ledger.Shelley.PParams
   ( PPUPState (..),
-    PParams' (..),
     ShelleyPParams,
+    ShelleyPParamsHKD(..),
     Update,
   )
 import Cardano.Ledger.Shelley.Rules.Ppup

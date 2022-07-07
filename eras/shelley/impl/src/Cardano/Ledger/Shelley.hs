@@ -6,11 +6,11 @@ module Cardano.Ledger.Shelley
     Value,
     Script,
     AuxiliaryData,
-    PParams,
     ShelleyPParams,
     Witnesses,
     nativeMultiSigTag,
     -- Deprecated
+    PParams,
     Shelley.Tx,
     Shelley.TxOut,
     Shelley.TxBody,

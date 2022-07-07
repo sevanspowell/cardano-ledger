@@ -82,7 +82,6 @@ import Cardano.Ledger.Core hiding (TxBody, TxOut)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)

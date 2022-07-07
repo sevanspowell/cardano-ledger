@@ -52,7 +52,6 @@ import Cardano.Ledger.Block (BlockAnn)
 import Cardano.Ledger.Core hiding (TxSeq)
 import qualified Cardano.Ledger.Core as Core (TxSeq)
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Serialization

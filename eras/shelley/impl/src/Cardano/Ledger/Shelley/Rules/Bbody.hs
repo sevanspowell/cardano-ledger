@@ -25,7 +25,6 @@ import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, UnitInterval, epochInfoPure)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Hashes (EraIndependentBlockBody, EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)

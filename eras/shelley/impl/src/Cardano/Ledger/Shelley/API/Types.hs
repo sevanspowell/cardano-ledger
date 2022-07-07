@@ -99,9 +99,9 @@ import Cardano.Ledger.Shelley.Metadata as X
   )
 import Cardano.Ledger.Shelley.PParams as X
   ( PParams,
-    PParams' (..),
-    ShelleyPParams,
     ProposedPPUpdates (..),
+    ShelleyPParams,
+    ShelleyPParamsHKD (..),
     Update (..),
   )
 import Cardano.Ledger.Shelley.PoolRank as X
@@ -134,12 +134,12 @@ import Cardano.Ledger.Shelley.StabilityWindow as X
     computeStabilityWindow,
   )
 import Cardano.Ledger.Shelley.Tx as X
-  ( Tx,
-    TxBody,
-    TxOut,
-    ShelleyTx (..),
+  ( ShelleyTx (..),
     ShelleyTxBody (..),
     ShelleyTxOut (..),
+    Tx,
+    TxBody,
+    TxOut,
     WitnessSet,
   )
 import Cardano.Ledger.Shelley.TxBody as X

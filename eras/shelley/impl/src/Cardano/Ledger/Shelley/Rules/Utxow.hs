@@ -86,7 +86,6 @@ import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (Update))
 import Cardano.Ledger.Shelley.Rules.Utxo (UTXO, UtxoEnv (..), UtxoEvent, UtxoPredicateFailure)
-import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
@@ -95,7 +94,6 @@ import Cardano.Ledger.Shelley.Tx
   )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
-    EraIndependentTxBody,
     PoolCert (..),
     PoolParams (..),
     ShelleyEraTxBody (..),
