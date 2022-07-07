@@ -34,6 +34,7 @@ module Cardano.Ledger.Shelley.Tx
     sizeShelleyTxG,
     decodeWits,
     segwitTx,
+
     -- * Witnesses
     ShelleyWitnesses,
     WitnessSet,
@@ -54,6 +55,7 @@ module Cardano.Ledger.Shelley.Tx
     prettyWitnessSetParts,
     minfee,
     witsFromTxWitnesses,
+
     -- * Re-exports
     TxBody,
     ShelleyTxBody (..),
@@ -222,41 +224,40 @@ instance CC.Crypto crypto => EraTx (ShelleyEra crypto) where
   sizeTxG = sizeShelleyTxG
 
 deriving newtype instance
-  ( NFData (Core.TxBody (ShelleyEra crypto)),
-    NFData (Witnesses (ShelleyEra crypto)),
-    NFData (AuxiliaryData (ShelleyEra crypto)),
-    CC.Crypto crypto
+  ( NFData (Core.TxBody era),
+    NFData (Witnesses era),
+    NFData (AuxiliaryData era)
   ) =>
-  NFData (ShelleyTx (ShelleyEra crypto))
+  NFData (ShelleyTx era)
 
-deriving newtype instance Eq (Tx (ShelleyEra crypto))
-
-deriving newtype instance
-  ( CC.Crypto crypto,
-    Show (AuxiliaryData (ShelleyEra crypto)),
-    Show (Core.TxBody (ShelleyEra crypto)),
-    Show (Witnesses (ShelleyEra crypto))
-  ) =>
-  Show (ShelleyTx (ShelleyEra crypto))
+deriving newtype instance Eq (Tx era)
 
 deriving newtype instance
-  ( CC.Crypto crypto,
-    NoThunks (AuxiliaryData (ShelleyEra crypto)),
-    NoThunks (Core.TxBody (ShelleyEra crypto)),
-    NoThunks (Witnesses (ShelleyEra crypto))
+  ( Era era,
+    Show (AuxiliaryData era),
+    Show (Core.TxBody era),
+    Show (Witnesses era)
   ) =>
-  NoThunks (ShelleyTx (ShelleyEra crypto))
+  Show (ShelleyTx era)
+
+deriving newtype instance
+  ( Era era,
+    NoThunks (AuxiliaryData era),
+    NoThunks (Core.TxBody era),
+    NoThunks (Witnesses era)
+  ) =>
+  NoThunks (ShelleyTx era)
 
 pattern ShelleyTx ::
-  ( CC.Crypto crypto,
-    ToCBOR (AuxiliaryData (ShelleyEra crypto)),
-    ToCBOR (Core.TxBody (ShelleyEra crypto)),
-    ToCBOR (Witnesses (ShelleyEra crypto))
+  ( Era era,
+    ToCBOR (AuxiliaryData era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Witnesses era)
   ) =>
-  Core.TxBody (ShelleyEra crypto) ->
-  Witnesses (ShelleyEra crypto) ->
-  StrictMaybe (AuxiliaryData (ShelleyEra crypto)) ->
-  ShelleyTx (ShelleyEra crypto)
+  Core.TxBody era ->
+  Witnesses era ->
+  StrictMaybe (AuxiliaryData era) ->
+  ShelleyTx era
 pattern ShelleyTx {body, wits, auxiliaryData} <-
   TxConstr
     ( Memo
@@ -308,14 +309,14 @@ instance
           )
 
 deriving via
-  Mem (TxRaw (ShelleyEra crypto))
+  Mem (TxRaw era)
   instance
-    ( CC.Crypto crypto,
-      FromCBOR (Annotator (Core.TxBody (ShelleyEra crypto))),
-      FromCBOR (Annotator (AuxiliaryData (ShelleyEra crypto))),
-      FromCBOR (Annotator (Witnesses (ShelleyEra crypto)))
+    ( Era era,
+      FromCBOR (Annotator (Core.TxBody era)),
+      FromCBOR (Annotator (AuxiliaryData era)),
+      FromCBOR (Annotator (Witnesses era))
     ) =>
-    FromCBOR (Annotator (Tx (ShelleyEra crypto)))
+    FromCBOR (Annotator (Tx era))
 
 -- | Construct a Tx containing the explicit serialised bytes.
 --
@@ -586,21 +587,20 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
-  forall crypto.
-  CC.Crypto crypto =>
-  MultiSig crypto ->
-  Tx (ShelleyEra crypto) ->
+  EraTx era =>
+  MultiSig (Crypto era) ->
+  Core.Tx era ->
   Bool
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
   where
-    vhks = Set.map witVKeyHash (addrWits' (tx ^. witsTxG))
+    vhks = Set.map witVKeyHash (tx ^. witsTxG . addrWitsG)
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
-  CC.Crypto crypto =>
-  Tx (ShelleyEra crypto) ->
-  Map (ScriptHash crypto) (Script (ShelleyEra crypto))
+  EraTx era =>
+  Core.Tx era ->
+  Map (ScriptHash (Crypto era)) (Script era)
 txwitsScript tx = tx ^. witsTxG . scriptWitsG
 
 extractKeyHashWitnessSet ::
