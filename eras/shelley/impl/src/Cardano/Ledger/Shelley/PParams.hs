@@ -24,6 +24,7 @@ module Cardano.Ledger.Shelley.PParams
     ProposedPPUpdates (..),
     emptyPPPUpdates,
     PParamsUpdate,
+    ShelleyPParamsUpdate,
     emptyPParamsUpdate,
     Update (..),
     updatePParams,
