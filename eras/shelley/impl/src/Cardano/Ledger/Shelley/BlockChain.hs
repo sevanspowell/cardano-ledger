@@ -13,6 +13,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.BlockChain
   ( TxSeq,
@@ -49,6 +50,8 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Block (BlockAnn)
 import Cardano.Ledger.Core hiding (TxSeq)
+import qualified Cardano.Ledger.Core as Core (TxSeq)
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
@@ -59,6 +62,7 @@ import Cardano.Ledger.Serialization
     encodeFoldableEncoder,
     encodeFoldableMapEncoder,
   )
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx, segwitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
@@ -85,6 +89,13 @@ data ShelleyTxSeq era = TxSeq'
     -- bytes representing a (Map index metadata). Missing indices have SNothing for metadata
   }
   deriving (Generic)
+
+instance CC.Crypto c => SupportsSegWit (ShelleyEra c) where
+  type TxSeq (ShelleyEra c) = ShelleyTxSeq (ShelleyEra c)
+  fromTxSeq = txSeqTxns
+  toTxSeq = ShelleyTxSeq
+  hashTxSeq = bbHash
+  numSegComponents = 3
 
 type TxSeq era = ShelleyTxSeq era
 

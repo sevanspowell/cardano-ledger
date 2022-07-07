@@ -53,6 +53,7 @@ module Cardano.Ledger.Shelley.Tx
     addrWits',
     evalNativeMultiSigScript,
     hashMultiSigScript,
+    nativeMultiSigTag,
     validateNativeMultiSigScript,
     prettyWitnessSetParts,
     minfee,
@@ -92,6 +93,7 @@ import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxOut (..), TxBody, TxOut)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.DeepSeq (NFData)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import Data.Coders hiding (to)
@@ -527,6 +529,17 @@ hashMultiSigScript ::
 hashMultiSigScript = hashScript @era
 
 -- ========================================
+
+-- | Magic number "memorialized" in the ValidateScript class under the method:
+--   scriptPrefixTag:: Core.Script era -> Bs.ByteString, for the Shelley Era.
+nativeMultiSigTag :: BS.ByteString
+nativeMultiSigTag = "\00"
+
+instance CC.Crypto c => ValidateScript (ShelleyEra c) where
+  scriptPrefixTag _script = nativeMultiSigTag
+
+  -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
+  validateScript = validateNativeMultiSigScript
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
