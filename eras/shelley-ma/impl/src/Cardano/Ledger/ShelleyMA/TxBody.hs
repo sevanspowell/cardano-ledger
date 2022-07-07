@@ -11,6 +11,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -43,6 +44,7 @@ module Cardano.Ledger.ShelleyMA.TxBody
   )
 where
 
+import Data.Proxy
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
@@ -337,13 +339,13 @@ instance
 
   inputsTxBodyG = to (\(TxBodyConstr (Memo m _)) -> inputs m)
 
-  -- allInputsTxBodyG = inputsTxBodyG
+  allInputsTxBodyG = inputsTxBodyG
 
   outputsTxBodyG = to (\(TxBodyConstr (Memo m _)) -> outputs m)
 
   txFeeTxBodyG = to (\(TxBodyConstr (Memo m _)) -> txfee m)
 
-  mintedTxBodyG = to (\(TxBodyConstr (Memo m _)) -> mint m)
+  mintedTxBodyG = to (\(TxBodyConstr (Memo m _)) -> getScriptHash (Proxy @ma) (mint m))
 
   adHashTxBodyG = to (\(TxBodyConstr (Memo m _)) -> adHash m)
 
@@ -357,7 +359,7 @@ instance
   where
   wdrlsTxBodyG = to (\(TxBodyConstr (Memo m _)) -> wdrls m)
 
-  ttlTxBodyG = undefined -- to (\(TxBodyConstr (Memo m _)) -> _ttlX m)
+  ttlTxBodyG = undefined -- FIXME: restrict at the type level.
 
   updateTxBodyG = to (\(TxBodyConstr (Memo m _)) -> update m)
 
@@ -365,6 +367,8 @@ instance
 
 class ShelleyEraTxBody era => ShelleyMAEraTxBody era where
   vldtTxBodyG :: SimpleGetter (Core.TxBody era) ValidityInterval
+
+  mintTxBodyG :: SimpleGetter (Core.TxBody era) (Value era)
 
 instance
   ( MAClass ma crypto,
@@ -375,6 +379,8 @@ instance
   ShelleyMAEraTxBody (ShelleyMAEra ma crypto)
   where
   vldtTxBodyG = to (\(TxBodyConstr (Memo m _)) -> vldt m)
+
+  mintTxBodyG = to (\(TxBodyConstr (Memo m _)) -> mint m)
 
 -- ==================================================================
 -- Promote the fields of TxBodyRaw to be fields of TxBody. Either

@@ -291,7 +291,7 @@ scriptCred :: Credential kr crypto -> Maybe (ScriptHash crypto)
 scriptCred (KeyHashObj _) = Nothing
 scriptCred (ScriptHashObj hs) = Just hs
 
--- | Computes the set of script hashes required to unlock the transcation inputs
+-- | Computes the set of script hashes required to unlock the transaction inputs
 -- and the withdrawals.
 scriptsNeeded ::
   forall era.
