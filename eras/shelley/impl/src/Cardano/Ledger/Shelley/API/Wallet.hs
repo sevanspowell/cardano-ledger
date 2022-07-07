@@ -105,7 +105,7 @@ import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyWitnesses, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), ShelleyEraTxBody, WitVKey (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (epochInfoSize)
@@ -535,10 +535,15 @@ evaluateTransactionBalance pp u isNewPool txb =
 --------------------------------------------------------------------------------
 
 addShelleyKeyWitnesses ::
-  CC.Crypto crypto =>
-  ShelleyTx (ShelleyEra crypto) ->
-  Set (WitVKey 'Witness crypto) ->
-  ShelleyTx (ShelleyEra crypto)
+  ( Era era,
+    ToCBOR (TxBody era),
+    ToCBOR (Script era),
+    ToCBOR (AuxiliaryData era),
+    Witnesses era ~ ShelleyWitnesses era
+  ) =>
+  ShelleyTx era ->
+  Set (WitVKey 'Witness (Crypto era)) ->
+  ShelleyTx era
 addShelleyKeyWitnesses (ShelleyTx b ws aux) newWits = ShelleyTx b ws' aux
   where
     ws' = ws {addrWits = Set.union newWits (addrWits ws)}

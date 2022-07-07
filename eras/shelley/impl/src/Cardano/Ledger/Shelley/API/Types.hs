@@ -100,6 +100,7 @@ import Cardano.Ledger.Shelley.Metadata as X
 import Cardano.Ledger.Shelley.PParams as X
   ( PParams,
     PParams' (..),
+    ShelleyPParams,
     ProposedPPUpdates (..),
     Update (..),
   )

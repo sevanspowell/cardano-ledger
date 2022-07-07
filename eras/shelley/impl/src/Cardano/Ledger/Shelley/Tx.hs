@@ -39,7 +39,8 @@ module Cardano.Ledger.Shelley.Tx
     ShelleyWitnesses,
     WitnessSet,
     WitnessSetHKD
-      ( WitnessSet,
+      ( ShelleyWitnesses,
+        WitnessSet,
         addrWits,
         bootWits,
         scriptWits,
@@ -405,16 +406,16 @@ instance
   where
   mempty = WitnessSet mempty mempty mempty
 
-pattern WitnessSet ::
+pattern ShelleyWitnesses ::
   (Era era, ToCBOR (Script era)) =>
   Set (WitVKey 'Witness (Crypto era)) ->
   Map (ScriptHash (Crypto era)) (Script era) ->
   Set (BootstrapWitness (Crypto era)) ->
   WitnessSet era
-pattern WitnessSet {addrWits, scriptWits, bootWits} <-
+pattern ShelleyWitnesses {addrWits, scriptWits, bootWits} <-
   WitnessSet' addrWits scriptWits bootWits _
   where
-    WitnessSet awits scriptWitMap bootstrapWits =
+    ShelleyWitnesses awits scriptWitMap bootstrapWits =
       let encodeMapElement ix enc x =
             if null x then Nothing else Just (encodeWord ix <> enc x)
           l =
@@ -432,7 +433,17 @@ pattern WitnessSet {addrWits, scriptWits, bootWits} <-
               txWitsBytes = witsBytes
             }
 
+{-# COMPLETE ShelleyWitnesses #-}
+
+pattern WitnessSet ::
+  (Era era, ToCBOR (Script era)) =>
+  Set (WitVKey 'Witness (Crypto era)) ->
+  Map (ScriptHash (Crypto era)) (Script era) ->
+  Set (BootstrapWitness (Crypto era)) ->
+  WitnessSet era
+pattern WitnessSet a s b = ShelleyWitnesses a s b
 {-# COMPLETE WitnessSet #-}
+
 
 instance SafeToHash (WitnessSetHKD Identity era) where
   originalBytes = BSL.toStrict . txWitsBytes

@@ -169,7 +169,13 @@ type ShelleyEraCrypto crypto =
     DSignable crypto (Hash crypto EraIndependentTxBody)
   )
 
-instance ShelleyEraCrypto crypto => ApplyBlock (ShelleyEra crypto)
+{-# DEPRECATED ShelleyEraCrypto "Constraint synonyms are being removed" #-}
+
+instance
+  ( CC.Crypto crypto,
+    DSignable crypto (Hash crypto EraIndependentTxBody)
+  ) =>
+  ApplyBlock (ShelleyEra crypto)
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
