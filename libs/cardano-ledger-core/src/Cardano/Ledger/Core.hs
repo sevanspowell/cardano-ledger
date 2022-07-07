@@ -28,6 +28,7 @@ module Cardano.Ledger.Core
     Value,
     Script,
     EraPParams (..),
+    PParamsDelta,
 
     -- * Era STS
     EraRule,
@@ -40,6 +41,8 @@ module Cardano.Ledger.Core
     ValidateScript (..),
     -- $segWit
     SupportsSegWit (..),
+    -- * Re-exports
+    module Cardano.Ledger.Hashes
   )
 where
 
@@ -53,11 +56,6 @@ import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes
-  ( EraIndependentAuxiliaryData,
-    EraIndependentBlockBody,
-    EraIndependentTxBody,
-    ScriptHash (..),
-  )
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
@@ -248,6 +246,10 @@ class
   type PParamsUpdate era = (r :: Type) | r -> era
 
   applyPPUpdates :: PParams era -> PParamsUpdate era -> PParams era
+
+type PParamsDelta era = PParamsUpdate era
+{-# DEPRECATED PParamsDelta "Use `PParamsUpdate` instead" #-}
+
 
 -- | The set of witnesses in a Tx
 class Era era => EraWitnesses era where
