@@ -50,6 +50,9 @@ library
     Cardano.Ledger.ShelleyMA.Timelocks
     Cardano.Ledger.ShelleyMA.TxBody
 
+  other-modules:
+    Cardano.Ledger.ShelleyMA.Era
+
   build-depends:
     bytestring,
     base16-bytestring,
@@ -64,6 +67,7 @@ library
     deepseq,
     groups,
     mtl,
+    microlens,
     nothunks,
     primitive,
     cardano-ledger-shelley,
