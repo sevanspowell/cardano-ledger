@@ -114,8 +114,9 @@ import Data.Time (UTCTime (..))
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate, toOrdinalDate)
 import Data.Time.Clock (diffTimeToPicoseconds, picosecondsToDiffTime)
 import Data.Typeable
-import Network.Socket (HostAddress6)
 import Prelude
+
+type HostAddress6 = (Word32, Word32, Word32, Word32)
 
 class Typeable a => ToCBORGroup a where
   toCBORGroup :: a -> Encoding

@@ -82,7 +82,6 @@ library
     groups,
     iproute,
     mtl,
-    network,
     nothunks,
     partial-order,
     quiet,
